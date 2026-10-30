@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "node server.cjs",
+    "preview:prod": "npm run build && node server.cjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

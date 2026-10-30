@@ -48,6 +48,7 @@ export function AnalyzePanel() {
   const setAnalyzing= useStore((s) => s.setAnalyzing)
   const setReport   = useStore((s) => s.setReport)
   const setError    = useStore((s) => s.setError)
+  const setSettings = useStore((s) => s.setSettings)
   const clearImage  = useStore((s) => s.clearImage)
   const addHistory  = useStore((s) => s.addHistory)
   const setTab      = useStore((s) => s.setTab)
@@ -56,6 +57,10 @@ export function AnalyzePanel() {
   const run = async () => {
     if (!image) { setError('Upload an image first.'); return }
     if (!settings.apiKey) { setError('Neural engine configuration required. Check Settings tab.'); return }
+    // ensure opencode uses proxied endpoint to avoid CORS
+    if (settings.provider === 'opencode' && !settings.endpoint.startsWith('/api/opencode')) {
+      setSettings({ endpoint: '/api/opencode/v1/chat/completions' })
+    }
     setError(''); setRaw(''); setAnalyzing(true, 'Preprocessing image…')
     try {
       const { dataUrl } = await resizeImage(image, 1280, 0.85)

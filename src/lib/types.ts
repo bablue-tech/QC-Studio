@@ -52,7 +52,7 @@ export const PROVIDER_DEFAULTS: Record<Provider, { endpoint: string; model: stri
   anthropic: { endpoint: 'https://api.anthropic.com/v1/messages', model: 'claude-sonnet-4-5' },
   gemini: { endpoint: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-2.0-flash' },
   // mimo-v2.6-flash-free is the only FREE model on OpenCode.ai with vision/image support
-  opencode: { endpoint: 'https://opencode.ai/inference/openai/v1/chat/completions', model: 'mimo-v2.6-flash-free' },
+  opencode: { endpoint: '/api/opencode/v1/chat/completions', model: 'mimo-v2.6-flash-free' },
   custom: { endpoint: '', model: '' },
 }
 

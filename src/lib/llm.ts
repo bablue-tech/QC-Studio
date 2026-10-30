@@ -44,13 +44,20 @@ export async function analyzeImage(settings: Settings, imageDataUrl: string, onT
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
         body: JSON.stringify(body),
       })
-      if (!res.ok) throw new Error(`${settings.provider} error ${res.status}: ${await res.text()}`)
+      if (!res.ok) {
+        const body = await res.text()
+        if (body.includes('FreeUsageLimitError')) throw new Error('Free usage limit reached for this API key. Please use your own OpenCode API key or subscribe to OpenCode Go at https://opencode.ai/go')
+        if (res.status === 429) throw new Error('Rate limited by the AI service. Please wait a moment and try again.')
+        if (res.status === 401) throw new Error('Invalid API key. Check your settings.')
+        if (res.status === 403) throw new Error('Access forbidden. The AI service may be blocking browser requests.')
+        throw new Error(`${settings.provider} error ${res.status}: ${body}`)
+      }
       const data = await res.json()
       const text = data?.choices?.[0]?.message?.content ?? ''
       onToken?.(text)
       return text
     } catch (e) {
-      if (e instanceof TypeError) throw new Error('Failed to connect to the AI service. Check your network or try a different AI provider.')
+      if (e instanceof TypeError) throw new Error('Failed to connect to the AI service. Check your network or try a different AI provider. (' + (e.message || 'network error') + ')')
       throw e
     }
   }
@@ -80,13 +87,18 @@ export async function analyzeImage(settings: Settings, imageDataUrl: string, onT
         },
         body: JSON.stringify(body),
       })
-      if (!res.ok) throw new Error(`Anthropic error ${res.status}: ${await res.text()}`)
+      if (!res.ok) {
+        const body = await res.text()
+        if (res.status === 429) throw new Error('Rate limited by the AI service. Please wait a moment and try again.')
+        if (res.status === 401) throw new Error('Invalid API key. Check your settings.')
+        throw new Error(`Anthropic error ${res.status}: ${body}`)
+      }
       const data = await res.json()
       const text = data?.content?.map((c: any) => c.text).join('') ?? ''
       onToken?.(text)
       return text
     } catch (e) {
-      if (e instanceof TypeError) throw new Error('Failed to connect to the AI service. Check your network or try a different AI provider.')
+      if (e instanceof TypeError) throw new Error('Failed to connect to the AI service. Check your network or try a different AI provider. (' + (e.message || 'network error') + ')')
       throw e
     }
   }
@@ -107,13 +119,18 @@ export async function analyzeImage(settings: Settings, imageDataUrl: string, onT
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      if (!res.ok) throw new Error(`Gemini error ${res.status}: ${await res.text()}`)
+      if (!res.ok) {
+        const body = await res.text()
+        if (res.status === 429) throw new Error('Rate limited by the AI service. Please wait a moment and try again.')
+        if (res.status === 401) throw new Error('Invalid API key. Check your settings.')
+        throw new Error(`Gemini error ${res.status}: ${body}`)
+      }
       const data = await res.json()
       const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') ?? ''
       onToken?.(text)
       return text
     } catch (e) {
-      if (e instanceof TypeError) throw new Error('Failed to connect to the AI service. Check your network or try a different AI provider.')
+      if (e instanceof TypeError) throw new Error('Failed to connect to the AI service. Check your network or try a different AI provider. (' + (e.message || 'network error') + ')')
       throw e
     }
   }

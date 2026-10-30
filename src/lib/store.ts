@@ -30,7 +30,14 @@ type State = {
 const loadSettings = (): Settings => {
   try {
     const raw = localStorage.getItem('qc_settings')
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      // migrate old opencode endpoint to proxied path (fixes CORS)
+      if (parsed.provider === 'opencode' && !parsed.endpoint?.startsWith('/api/opencode')) {
+        parsed.endpoint = PROVIDER_DEFAULTS.opencode.endpoint
+      }
+      return parsed
+    }
   } catch {}
   return { provider: 'opencode', apiKey: OPENCODE_API_KEY, model: PROVIDER_DEFAULTS.opencode.model, endpoint: PROVIDER_DEFAULTS.opencode.endpoint, temperature: 0.2, maxTokens: 2000, checks: [...DEFAULT_CHECKS] }
 
