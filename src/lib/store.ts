@@ -36,6 +36,10 @@ const loadSettings = (): Settings => {
       if (parsed.provider === 'opencode' && !parsed.endpoint?.startsWith('/api/opencode')) {
         parsed.endpoint = PROVIDER_DEFAULTS.opencode.endpoint
       }
+      // migrate old API key to new one
+      if (parsed.provider === 'opencode' && parsed.apiKey === 'oc_sk_fe53ce320478_pR4071BE3ljZVZKkElPsvVwPFM6ieKZj') {
+        parsed.apiKey = OPENCODE_API_KEY
+      }
       return parsed
     }
   } catch {}

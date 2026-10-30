@@ -57,4 +57,4 @@ export const PROVIDER_DEFAULTS: Record<Provider, { endpoint: string; model: stri
 }
 
 /** Pre-filled OpenCode API key */
-export const OPENCODE_API_KEY = 'oc_sk_fe53ce320478_pR4071BE3ljZVZKkElPsvVwPFM6ieKZj'
+export const OPENCODE_API_KEY = 'oc_sk_23ed4e7448bd_5MS4TpmFa89S4a_GTqmGfcnXUmbxB6iq'
