@@ -1,0 +1,285 @@
+import { useState } from 'react'
+import { useStore } from '../lib/store'
+import { resizeImage } from '../lib/image'
+import { analyzeImage, parseReport } from '../lib/llm'
+import { Uploader } from './Uploader'
+import { ScanLine, X, Cpu, BarChart3, RefreshCw, Layers, Zap, ChevronRight } from 'lucide-react'
+
+const PIPELINE_NODES = [
+  {
+    icon: '⬡',
+    label: 'Preprocess',
+    desc: 'Resize & normalize to max 1280px',
+    color: 'rgba(59,130,246,0.15)',
+    border: 'rgba(59,130,246,0.3)',
+  },
+  {
+    icon: '◈',
+    label: 'Neural Vision',
+    desc: 'Multimodal AI image analysis',
+    color: 'rgba(139,92,246,0.15)',
+    border: 'rgba(139,92,246,0.3)',
+  },
+  {
+    icon: '◎',
+    label: 'QC Report',
+    desc: 'Structured JSON scoring',
+    color: 'rgba(6,182,212,0.12)',
+    border: 'rgba(6,182,212,0.3)',
+  },
+  {
+    icon: '⟁',
+    label: 'Zero Storage',
+    desc: 'All processed in-browser',
+    color: 'rgba(16,185,129,0.12)',
+    border: 'rgba(16,185,129,0.3)',
+  },
+]
+
+export function AnalyzePanel() {
+  const image       = useStore((s) => s.image)
+  const imageUrl    = useStore((s) => s.imageUrl)
+  const imageName   = useStore((s) => s.imageName)
+  const imageWidth  = useStore((s) => s.imageWidth)
+  const imageHeight = useStore((s) => s.imageHeight)
+  const settings    = useStore((s) => s.settings)
+  const isAnalyzing = useStore((s) => s.isAnalyzing)
+  const progress    = useStore((s) => s.progress)
+  const setAnalyzing= useStore((s) => s.setAnalyzing)
+  const setReport   = useStore((s) => s.setReport)
+  const setError    = useStore((s) => s.setError)
+  const clearImage  = useStore((s) => s.clearImage)
+  const addHistory  = useStore((s) => s.addHistory)
+  const setTab      = useStore((s) => s.setTab)
+  const [raw, setRaw] = useState('')
+
+  const run = async () => {
+    if (!image) { setError('Upload an image first.'); return }
+    if (!settings.apiKey) { setError('Neural engine configuration required. Check Settings tab.'); return }
+    setError(''); setRaw(''); setAnalyzing(true, 'Preprocessing image…')
+    try {
+      const { dataUrl } = await resizeImage(image, 1280, 0.85)
+      setAnalyzing(true, 'Running neural vision analysis…')
+      const text = await analyzeImage(settings, dataUrl, (t) => setRaw(t))
+      setAnalyzing(true, 'Parsing QC report…')
+      const report = parseReport(text)
+      report.raw = text
+      setReport(report)
+      addHistory({
+        id: 'run_' + Date.now(),
+        createdAt: Date.now(),
+        imageName: imageName || 'image',
+        thumbnail: dataUrl,
+        report,
+        provider: settings.provider,
+        model: settings.model,
+      })
+      setTab('report')
+    } catch (e) {
+      setError(String(e))
+    } finally {
+      setAnalyzing(false, '')
+    }
+  }
+
+  return (
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 28px' }}>
+      {!image ? (
+        <div>
+          {/* Upload Section */}
+          <div style={{ marginBottom: 32 }}>
+            <div className="section-label" style={{ marginBottom: 20 }}>
+              <ScanLine size={11} />
+              Image Input Node
+            </div>
+            <Uploader />
+          </div>
+
+          {/* Pipeline Nodes */}
+          <div className="section-label" style={{ marginBottom: 16 }}>
+            <Layers size={11} />
+            Analysis Pipeline
+          </div>
+          <div style={{ display: 'flex', gap: 0, alignItems: 'stretch', flexWrap: 'wrap' }}>
+            {PIPELINE_NODES.map((node, i) => (
+              <div key={node.label} style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 160 }}>
+                <div className="pipeline-card" style={{ flex: 1 }}>
+                  <div className="pipeline-node-icon" style={{ background: node.color, border: `1px solid ${node.border}` }}>
+                    <span style={{ fontSize: 20 }}>{node.icon}</span>
+                  </div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text-bright)', marginBottom: 4, fontFamily: 'var(--font-display)' }}>
+                    {node.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)' }}>
+                    {node.desc}
+                  </div>
+                </div>
+                {i < PIPELINE_NODES.length - 1 && (
+                  <div style={{ padding: '0 8px', color: 'var(--text-ghost)', flexShrink: 0 }}>
+                    <ChevronRight size={14} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }}>
+          {/* Image Preview */}
+          <div>
+            <div className="section-label" style={{ marginBottom: 14 }}>
+              <ScanLine size={11} />
+              Image Preview Node
+            </div>
+            <div className="card card-glow" style={{ padding: 14, position: 'relative' }}>
+              <img
+                src={imageUrl!}
+                alt="preview"
+                style={{ width: '100%', borderRadius: 10, display: 'block', maxHeight: 520, objectFit: 'contain' }}
+              />
+              {/* Corner brackets */}
+              <div className="corner-bracket tl" />
+              <div className="corner-bracket tr" />
+              <div className="corner-bracket bl" />
+              <div className="corner-bracket br" />
+
+              {/* Scanning overlay */}
+              {isAnalyzing && (
+                <div className="scan-overlay">
+                  <div className="scan-line-anim" />
+                  <div className="thinking-dots">
+                    <span /><span /><span />
+                  </div>
+                  <span style={{ fontSize: 12, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)', letterSpacing: 0.5 }}>
+                    {progress}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Image meta */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 12, marginTop: 10,
+              fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
+            }}>
+              <span className="text-azure">{imageName}</span>
+              <span style={{ color: 'var(--border-med)' }}>·</span>
+              <span>{imageWidth}×{imageHeight}px</span>
+              <button
+                onClick={clearImage}
+                style={{
+                  marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '4px 12px', borderRadius: 7,
+                  background: 'rgba(244,63,94,0.06)',
+                  border: '1px solid rgba(244,63,94,0.2)',
+                  color: '#fb7185', cursor: 'pointer', fontSize: 11,
+                  fontFamily: 'var(--font-mono)',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <X size={10} /> Remove
+              </button>
+            </div>
+          </div>
+
+          {/* Control Panel */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="section-label">
+              <Cpu size={11} />
+              QC Engine
+            </div>
+
+            {/* Engine status card */}
+            <div className="engine-card">
+              <div className="engine-label">
+                <Zap size={9} />
+                Neural QC Engine · Active
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-bright)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>
+                Visual Intelligence System
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)' }}>
+                {settings.checks.length} quality checks · Vision-enabled
+              </div>
+            </div>
+
+            {/* Run Button */}
+            <button
+              id="btn-run-qc"
+              onClick={run}
+              disabled={isAnalyzing}
+              className="btn-primary"
+              style={{ width: '100%', padding: '15px 24px', fontSize: 14 }}
+            >
+              {isAnalyzing ? (
+                <>
+                  <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                  {progress || 'Analyzing…'}
+                </>
+              ) : (
+                <>
+                  <ScanLine size={14} />
+                  Run QC Analysis
+                </>
+              )}
+            </button>
+
+            {isAnalyzing && (
+              <div className="progress-bar-track">
+                <div className="progress-bar-fill" />
+              </div>
+            )}
+
+            {/* Active Checks */}
+            <div className="card" style={{ padding: 16 }}>
+              <div style={{
+                fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)',
+                letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 12,
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                <BarChart3 size={10} />
+                Active QC Checks · {settings.checks.length}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {settings.checks.map((c, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    fontSize: 11.5, color: 'var(--text-soft)',
+                    padding: '4px 0',
+                    borderBottom: i < settings.checks.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                  }}>
+                    <div style={{
+                      width: 6, height: 6, borderRadius: '50%',
+                      background: 'linear-gradient(135deg, var(--electric), var(--violet))',
+                      flexShrink: 0,
+                      boxShadow: '0 0 6px rgba(59,130,246,0.5)',
+                    }} />
+                    {c}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Raw output (debug, hidden by default) */}
+            {raw && (
+              <details style={{ marginTop: 4 }}>
+                <summary style={{
+                  fontSize: 10.5, color: 'var(--text-muted)', cursor: 'pointer',
+                  fontFamily: 'var(--font-mono)', userSelect: 'none', letterSpacing: 0.5,
+                }}>
+                  ▸ Raw engine output
+                </summary>
+                <div className="card" style={{ padding: 12, marginTop: 8, maxHeight: 200, overflow: 'auto' }}>
+                  <pre style={{
+                    fontSize: 10, whiteSpace: 'pre-wrap', wordBreak: 'break-all',
+                    color: 'var(--text-muted)', margin: 0, fontFamily: 'var(--font-mono)',
+                  }}>{raw}</pre>
+                </div>
+              </details>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
