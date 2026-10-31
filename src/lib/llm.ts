@@ -23,7 +23,7 @@ export async function analyzeImage(settings: Settings, imageDataUrl: string, onT
   const sys = SYSTEM_PROMPT(settings.checks)
   const userText = 'Perform full QC on this character image and return JSON only.'
 
-  if (settings.provider === 'openai' || settings.provider === 'opencode' || settings.provider === 'custom') {
+  if (settings.provider === 'openai' || settings.provider === 'opencode' || settings.provider === 'openrouter' || settings.provider === 'custom') {
     const body: any = {
       model: settings.model,
       temperature: settings.temperature,
@@ -36,8 +36,8 @@ export async function analyzeImage(settings: Settings, imageDataUrl: string, onT
         ] },
       ],
     }
-    // request json for openai
-    if (settings.provider === 'openai') body.response_format = { type: 'json_object' }
+    // request json for openai-compatible providers
+    if (settings.provider === 'openai' || settings.provider === 'openrouter') body.response_format = { type: 'json_object' }
     try {
       const res = await fetch(settings.endpoint, {
         method: 'POST',

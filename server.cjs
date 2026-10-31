@@ -44,6 +44,26 @@ function serveStatic(req, res) {
 }
 
 function proxyRequest(req, res) {
+  if (req.url.startsWith('/api/openrouter')) {
+    const targetPath = req.url.replace(/^\/api\/openrouter/, '')
+    const options = {
+      hostname: 'openrouter.ai',
+      port: 443,
+      path: targetPath,
+      method: req.method,
+      headers: { ...req.headers, host: 'openrouter.ai' },
+    }
+    const proxyReq = https.request(options, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode, proxyRes.headers)
+      proxyRes.pipe(res)
+    })
+    proxyReq.on('error', (err) => {
+      res.writeHead(502)
+      res.end(JSON.stringify({ error: 'Proxy error: ' + err.message }))
+    })
+    req.pipe(proxyReq)
+    return
+  }
   const targetPath = req.url.replace(/^\/api\/opencode/, '')
   const options = {
     hostname: 'opencode.ai',
@@ -67,7 +87,7 @@ function proxyRequest(req, res) {
 }
 
 const server = http.createServer((req, res) => {
-  if (req.url.startsWith('/api/opencode')) {
+  if (req.url.startsWith('/api/opencode') || req.url.startsWith('/api/openrouter')) {
     proxyRequest(req, res)
   } else {
     serveStatic(req, res)

@@ -57,9 +57,12 @@ export function AnalyzePanel() {
   const run = async () => {
     if (!image) { setError('Upload an image first.'); return }
     if (!settings.apiKey) { setError('Neural engine configuration required. Check Settings tab.'); return }
-    // ensure opencode uses proxied endpoint to avoid CORS
+    // ensure providers use proxied endpoint to avoid CORS
     if (settings.provider === 'opencode' && !settings.endpoint.startsWith('/api/opencode')) {
       setSettings({ endpoint: '/api/opencode/v1/chat/completions' })
+    }
+    if (settings.provider === 'openrouter' && !settings.endpoint.startsWith('/api/openrouter')) {
+      setSettings({ endpoint: '/api/openrouter/api/v1/chat/completions' })
     }
     setError(''); setRaw(''); setAnalyzing(true, 'Preprocessing image…')
     try {

@@ -10,6 +10,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/opencode/, ''),
       },
+      '/api/openrouter': {
+        target: 'https://openrouter.ai',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/openrouter/, ''),
+      },
     },
   },
   preview: {
@@ -18,6 +23,11 @@ export default defineConfig({
         target: 'https://opencode.ai/inference/openai',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/opencode/, ''),
+      },
+      '/api/openrouter': {
+        target: 'https://openrouter.ai',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/openrouter/, ''),
       },
     },
   },
