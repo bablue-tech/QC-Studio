@@ -82,8 +82,8 @@ export function AnalyzePanel() {
         imageName: imageName || 'image',
         thumbnail: dataUrl,
         report,
-        provider: settings.provider,
-        model: settings.model,
+        provider: 'openrouter',
+        model: PROVIDER_DEFAULTS.openrouter.model,
       })
       setTab('report')
     } catch (e) {

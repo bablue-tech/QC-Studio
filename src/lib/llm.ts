@@ -53,7 +53,18 @@ export async function analyzeImage(settings: Settings, imageDataUrl: string, onT
         throw new Error(`${settings.provider} error ${res.status}: ${body}`)
       }
       const data = await res.json()
-      const text = data?.choices?.[0]?.message?.content ?? ''
+      const content = data?.choices?.[0]?.message?.content
+      const text = typeof content === 'string'
+        ? content
+        : Array.isArray(content)
+          ? content.map((part: any) => typeof part === 'string' ? part : part?.text ?? '').join('')
+          : ''
+      if (!text.trim()) {
+        const reason = data?.choices?.[0]?.finish_reason
+        throw new Error(reason === 'length'
+          ? 'The free vision model ran out of response space. Increase Response Length in Settings and retry.'
+          : 'The free vision model returned an empty analysis. Please retry the image review.')
+      }
       onToken?.(text)
       return text
     } catch (e) {
@@ -141,10 +152,56 @@ export async function analyzeImage(settings: Settings, imageDataUrl: string, onT
 export function parseReport(text: string): any {
   // strip code fences
   let t = text.trim()
+  if (!t) throw new Error('The free vision model returned no report. Please retry the image review.')
   t = t.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')
-  try { return JSON.parse(t) } catch {}
+  try { return ensureSummary(JSON.parse(t)) } catch (error) {
+    if (error instanceof Error && error.message.includes('summary')) throw error
+  }
   // try to find json object
   const m = t.match(/\{[\s\S]*\}/)
-  if (m) { try { return JSON.parse(m[0]) } catch {} }
+  if (m) {
+    try { return ensureSummary(JSON.parse(m[0])) } catch (error) {
+      if (error instanceof Error && error.message.includes('summary')) throw error
+    }
+  }
   return { overall_score: 0, summary: text, categories: [], priority_fixes: [], extra_observations: [], raw: text }
+}
+
+function ensureSummary(report: any): any {
+  if (!report || typeof report !== 'object' || Array.isArray(report)) {
+    throw new Error('The free vision model returned an invalid report. Please retry the image review.')
+  }
+
+  const summary = typeof report.summary === 'string' ? report.summary.trim() : ''
+  if (summary) return report
+
+  const categories = Array.isArray(report.categories) ? report.categories : []
+  const priorityFixes = Array.isArray(report.priority_fixes) ? report.priority_fixes.filter(Boolean) : []
+  const attention = categories.filter((category: any) => category?.status === 'warn' || category?.status === 'fail')
+  const findings = categories.flatMap((category: any) =>
+    Array.isArray(category?.findings) ? category.findings.map((finding: any) => finding?.issue).filter(Boolean) : [],
+  )
+  const score = Number.isFinite(Number(report.overall_score)) ? Number(report.overall_score) : null
+  const scoreText = score === null ? '' : `Overall score: ${score}/100. `
+
+  if (findings.length || attention.length) {
+    const reviewText = attention.length
+      ? `Needs attention in ${attention.map((category: any) => category.name).filter(Boolean).slice(0, 4).join(', ') || 'one or more categories'}.`
+      : 'The listed findings need review.'
+    const findingText = findings.slice(0, 3).join(' ')
+    report.summary = `${scoreText}${reviewText}${findingText ? ` Key findings: ${findingText}` : ''}`
+    return report
+  }
+
+  if (categories.length) {
+    report.summary = `${scoreText}The model reviewed ${categories.length} QC categories and reported no specific issues.`
+    return report
+  }
+
+  if (priorityFixes.length) {
+    report.summary = `${scoreText}Priority review: ${priorityFixes.slice(0, 3).join(' ')}`
+    return report
+  }
+
+  throw new Error('The model returned a report without a summary or QC findings. Please retry the image review.')
 }
