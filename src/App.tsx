@@ -61,7 +61,7 @@ export default function App() {
             <div className="logo-icon">
               <ShieldCheck size={18} color="#60a5fa" strokeWidth={2.2} />
             </div>
-            <span className="logo-name">BrandGuard</span>
+            <span className="logo-name">FrameProof</span>
             <span className="logo-badge">QC STUDIO</span>
           </div>
 

@@ -1,6 +1,6 @@
-# BrandGuard QC Studio
+# FrameProof QC Studio
 
-BrandGuard is a visual quality-control workspace for reviewing character and product imagery. Upload an image, run a structured vision review, and export or revisit the resulting report.
+FrameProof is a visual quality-control workspace for reviewing character and product imagery. Upload an image, run a structured vision review, and export or revisit the resulting report.
 
 ## Run locally
 
