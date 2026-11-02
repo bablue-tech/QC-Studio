@@ -52,7 +52,7 @@ export function SetupPanel() {
                 Neural Vision Engine
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)' }}>
-            Vision-capable · Multimodal AI · Server-side credentials
+                Nemotron 3.5 Super VL Free · Image-capable · Server-side key
               </div>
             </div>
           </div>

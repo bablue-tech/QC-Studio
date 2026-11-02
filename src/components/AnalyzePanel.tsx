@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../lib/store'
 import { resizeImage } from '../lib/image'
 import { analyzeImage, parseReport } from '../lib/llm'
+import { PROVIDER_DEFAULTS } from '../lib/types'
 import { Uploader } from './Uploader'
 import { ScanLine, X, Cpu, BarChart3, RefreshCw, Layers, Zap, ChevronRight } from 'lucide-react'
 
@@ -68,7 +69,13 @@ export function AnalyzePanel() {
     try {
       const { dataUrl } = await resizeImage(image, 1280, 0.85)
       setAnalyzing(true, 'Running neural vision analysis…')
-      const text = await analyzeImage(settings, dataUrl, (t) => setRaw(t))
+      const text = await analyzeImage({
+        ...settings,
+        provider: 'opencode',
+        apiKey: '',
+        endpoint: PROVIDER_DEFAULTS.opencode.endpoint,
+        model: PROVIDER_DEFAULTS.opencode.model,
+      }, dataUrl, (t) => setRaw(t))
       setAnalyzing(true, 'Parsing QC report…')
       const report = parseReport(text)
       report.raw = text
