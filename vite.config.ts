@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
         '/api/openrouter': {
           target: 'https://openrouter.ai',
           changeOrigin: true,
+          headers: env.OPENROUTER_API_KEY ? { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` } : {},
           rewrite: (path) => path.replace(/^\/api\/openrouter/, ''),
         },
       },
@@ -31,6 +32,7 @@ export default defineConfig(({ mode }) => {
         '/api/openrouter': {
           target: 'https://openrouter.ai',
           changeOrigin: true,
+          headers: env.OPENROUTER_API_KEY ? { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` } : {},
           rewrite: (path) => path.replace(/^\/api\/openrouter/, ''),
         },
       },

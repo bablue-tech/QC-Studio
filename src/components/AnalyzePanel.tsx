@@ -57,13 +57,9 @@ export function AnalyzePanel() {
 
   const run = async () => {
     if (!image) { setError('Upload an image first.'); return }
-    if (settings.provider !== 'opencode' && !settings.apiKey) { setError('Add an API key in Settings before running an analysis.'); return }
-    // ensure providers use proxied endpoint to avoid CORS
-    if (settings.provider === 'opencode' && !settings.endpoint.startsWith('/api/opencode')) {
-      setSettings({ endpoint: '/api/opencode/v1/chat/completions' })
-    }
-    if (settings.provider === 'openrouter' && !settings.endpoint.startsWith('/api/openrouter')) {
-      setSettings({ endpoint: '/api/openrouter/api/v1/chat/completions' })
+    // Pin all QC calls to OpenRouter's free image-capable router.
+    if (settings.provider !== 'openrouter' || settings.endpoint !== PROVIDER_DEFAULTS.openrouter.endpoint || settings.model !== PROVIDER_DEFAULTS.openrouter.model) {
+      setSettings({ provider: 'openrouter', endpoint: PROVIDER_DEFAULTS.openrouter.endpoint, model: PROVIDER_DEFAULTS.openrouter.model })
     }
     setError(''); setRaw(''); setAnalyzing(true, 'Preprocessing image…')
     try {
@@ -71,10 +67,10 @@ export function AnalyzePanel() {
       setAnalyzing(true, 'Running neural vision analysis…')
       const text = await analyzeImage({
         ...settings,
-        provider: 'opencode',
+        provider: 'openrouter',
         apiKey: '',
-        endpoint: PROVIDER_DEFAULTS.opencode.endpoint,
-        model: PROVIDER_DEFAULTS.opencode.model,
+        endpoint: PROVIDER_DEFAULTS.openrouter.endpoint,
+        model: PROVIDER_DEFAULTS.openrouter.model,
       }, dataUrl, (t) => setRaw(t))
       setAnalyzing(true, 'Parsing QC report…')
       const report = parseReport(text)

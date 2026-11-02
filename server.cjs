@@ -55,13 +55,18 @@ function serveStatic(req, res) {
 
 function proxyRequest(req, res) {
   if (req.url.startsWith('/api/openrouter')) {
+    if (!process.env.OPENROUTER_API_KEY) {
+      res.writeHead(503, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'OpenRouter is not configured. Set OPENROUTER_API_KEY on the server.' }))
+      return
+    }
     const targetPath = req.url.replace(/^\/api\/openrouter/, '')
     const options = {
       hostname: 'openrouter.ai',
       port: 443,
       path: targetPath,
       method: req.method,
-      headers: { ...req.headers, host: 'openrouter.ai' },
+      headers: { ...req.headers, authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`, host: 'openrouter.ai' },
     }
     const proxyReq = https.request(options, (proxyRes) => {
       res.writeHead(proxyRes.statusCode, proxyRes.headers)

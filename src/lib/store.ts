@@ -35,15 +35,15 @@ const loadSettings = (): Settings => {
       // API credentials are kept on the server; remove any previously stored browser key.
       delete parsed.apiKey
       parsed.apiKey = ''
-      // Use the configured server-side OpenCode account instead of legacy browser keys.
-      parsed.provider = 'opencode'
-      parsed.endpoint = PROVIDER_DEFAULTS.opencode.endpoint
-      parsed.model = PROVIDER_DEFAULTS.opencode.model
+      // Use the configured server-side OpenRouter account instead of legacy browser keys.
+      parsed.provider = 'openrouter'
+      parsed.endpoint = PROVIDER_DEFAULTS.openrouter.endpoint
+      parsed.model = PROVIDER_DEFAULTS.openrouter.model
       try { localStorage.setItem('qc_settings', JSON.stringify(parsed)) } catch {}
       return parsed
     }
   } catch {}
-  return { provider: 'opencode', apiKey: '', model: PROVIDER_DEFAULTS.opencode.model, endpoint: PROVIDER_DEFAULTS.opencode.endpoint, temperature: 0.2, maxTokens: 2000, checks: [...DEFAULT_CHECKS] }
+  return { provider: 'openrouter', apiKey: '', model: PROVIDER_DEFAULTS.openrouter.model, endpoint: PROVIDER_DEFAULTS.openrouter.endpoint, temperature: 0.2, maxTokens: 2000, checks: [...DEFAULT_CHECKS] }
 
 }
 const loadHistory = (): RunRecord[] => {

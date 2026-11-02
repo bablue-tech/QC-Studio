@@ -51,8 +51,8 @@ export const PROVIDER_DEFAULTS: Record<Provider, { endpoint: string; model: stri
   openai: { endpoint: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o' },
   anthropic: { endpoint: 'https://api.anthropic.com/v1/messages', model: 'claude-sonnet-4-5' },
   gemini: { endpoint: 'https://generativelanguage.googleapis.com/v1beta', model: 'gemini-2.0-flash' },
-  // Free OpenCode model explicitly designated as vision-language.
-  opencode: { endpoint: '/api/opencode/v1/chat/completions', model: 'nemotron-3.5-super-vl-free' },
-  openrouter: { endpoint: '/api/openrouter/api/v1/chat/completions', model: 'openai/gpt-4o' },
+  opencode: { endpoint: '/api/opencode/v1/chat/completions', model: 'mimo-v2.6-flash-free' },
+  // OpenRouter routes to a free model that supports the request's image input.
+  openrouter: { endpoint: '/api/openrouter/api/v1/chat/completions', model: 'openrouter/free' },
   custom: { endpoint: '', model: '' },
 }

@@ -46,7 +46,7 @@ export async function analyzeImage(settings: Settings, imageDataUrl: string, onT
       })
       if (!res.ok) {
         const body = await res.text()
-        if (body.includes('FreeUsageLimitError')) throw new Error('Free usage limit reached for this API key. Please use your own OpenCode API key or subscribe to OpenCode Go at https://opencode.ai/go')
+        if (body.includes('FreeUsageLimitError')) throw new Error('Free model usage limit reached. Please wait and try again later.')
         if (res.status === 429) throw new Error('Rate limited by the AI service. Please wait a moment and try again.')
         if (res.status === 401) throw new Error('Invalid API key. Check your settings.')
         if (res.status === 403) throw new Error('Access forbidden. The AI service may be blocking browser requests.')
