@@ -958,15 +958,18 @@ body { background: var(--bg-void); }
 .app-footer { justify-content: flex-start; padding: 0; }
 .app-footer::before { background: linear-gradient(to right, rgba(16,13,11,.98), transparent); }
 .app-footer::after { background: linear-gradient(to left, rgba(16,13,11,.98), transparent); }
-.app-footer .marquee-track { align-items: center; min-height: 100%; }
-.app-footer .marquee-content { gap: 16px; padding: 0 28px; color: var(--text-soft); font: 500 9px var(--font-body); letter-spacing: 1.35px; }
+.app-footer .marquee-track { align-items: center; width: 100%; min-height: 100%; overflow: hidden; animation: none; }
+.app-footer .marquee-content { gap: 16px; width: max-content; padding: 0 28px; color: var(--text-soft); font: 500 9px var(--font-body); letter-spacing: 1.35px; animation: footerMarquee 24s linear infinite; }
+.app-footer .marquee-track:hover .marquee-content { animation-play-state: paused; }
 .marquee-credit { white-space: nowrap; }
 .marquee-credit strong { color: var(--azure); font-weight: 700; }
 .marquee-star { color: var(--neon); font-size: 10px; }
+.marquee-tagline { color: var(--text-soft); white-space: nowrap; }
+@keyframes footerMarquee { from { transform: translateX(100vw); } to { transform: translateX(-100%); } }
 @media (max-width: 760px) {
   .app-footer .marquee-content { gap: 12px; padding-inline: 22px; font-size: 8px; letter-spacing: .9px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .app-footer .marquee-track { width: 100%; justify-content: center; animation: none !important; transform: none !important; }
-  .app-footer .marquee-content:nth-child(2) { display: none; }
+  .app-footer .marquee-content { width: auto; justify-content: center; animation: none !important; transform: none !important; }
 }
