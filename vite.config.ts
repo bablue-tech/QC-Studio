@@ -19,6 +19,12 @@ export default defineConfig(({ mode }) => {
           headers: env.OPENROUTER_API_KEY ? { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` } : {},
           rewrite: (path) => path.replace(/^\/api\/openrouter/, ''),
         },
+        '/api/gemini': {
+          target: 'https://generativelanguage.googleapis.com',
+          changeOrigin: true,
+          headers: env.GEMINI_API_KEY ? { 'x-goog-api-key': env.GEMINI_API_KEY } : {},
+          rewrite: (path) => path.replace(/^\/api\/gemini/, ''),
+        },
       },
     },
     preview: {
@@ -34,6 +40,12 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           headers: env.OPENROUTER_API_KEY ? { Authorization: `Bearer ${env.OPENROUTER_API_KEY}` } : {},
           rewrite: (path) => path.replace(/^\/api\/openrouter/, ''),
+        },
+        '/api/gemini': {
+          target: 'https://generativelanguage.googleapis.com',
+          changeOrigin: true,
+          headers: env.GEMINI_API_KEY ? { 'x-goog-api-key': env.GEMINI_API_KEY } : {},
+          rewrite: (path) => path.replace(/^\/api\/gemini/, ''),
         },
       },
     },

@@ -121,29 +121,41 @@ export async function analyzeImage(settings: Settings, imageDataUrl: string, onT
   }
 
   if (settings.provider === 'gemini') {
-    const url = `${settings.endpoint}/models/${settings.model}:generateContent?key=${encodeURIComponent(settings.apiKey)}`
-    const body = {
+    const url = `${settings.endpoint}/models/${settings.model}:generateContent`
+    const body = (maxOutputTokens: number) => ({
       systemInstruction: { parts: [{ text: sys }] },
       contents: [{ role: 'user', parts: [
         { text: userText },
         { inlineData: { mimeType: mediaType, data: base64 } },
       ] }],
-      generationConfig: { temperature: settings.temperature, maxOutputTokens: settings.maxTokens, responseMimeType: 'application/json' },
-    }
+      generationConfig: { temperature: settings.temperature, maxOutputTokens, responseMimeType: 'application/json' },
+    })
     try {
-      const res = await fetch(url, {
+      const request = (maxOutputTokens: number) => fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(body(maxOutputTokens)),
       })
+      const initialMaxOutputTokens = Math.max(settings.maxTokens, 4000)
+      let res = await request(initialMaxOutputTokens)
+      let data = res.ok ? await res.json() : null
+      if (res.ok && data?.candidates?.[0]?.finishReason === 'MAX_TOKENS' && initialMaxOutputTokens < 8000) {
+        res = await request(8000)
+        data = res.ok ? await res.json() : null
+      }
       if (!res.ok) {
         const body = await res.text()
         if (res.status === 429) throw new Error('Rate limited by the AI service. Please wait a moment and try again.')
         if (res.status === 401) throw new Error('Invalid API key. Check your settings.')
         throw new Error(`Gemini error ${res.status}: ${body}`)
       }
-      const data = await res.json()
       const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') ?? ''
+      if (!text.trim()) {
+        const reason = data?.candidates?.[0]?.finishReason
+        throw new Error(reason === 'MAX_TOKENS'
+          ? 'Gemini still could not fit the complete report after an automatic retry. Try again with fewer QC checks.'
+          : 'Gemini returned an empty analysis. Please retry the image review.')
+      }
       onToken?.(text)
       return text
     } catch (e) {

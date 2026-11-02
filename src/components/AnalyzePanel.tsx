@@ -57,9 +57,9 @@ export function AnalyzePanel() {
 
   const run = async () => {
     if (!image) { setError('Upload an image first.'); return }
-    // Pin all QC calls to OpenRouter's free image-capable router.
-    if (settings.provider !== 'openrouter' || settings.endpoint !== PROVIDER_DEFAULTS.openrouter.endpoint || settings.model !== PROVIDER_DEFAULTS.openrouter.model) {
-      setSettings({ provider: 'openrouter', endpoint: PROVIDER_DEFAULTS.openrouter.endpoint, model: PROVIDER_DEFAULTS.openrouter.model })
+    // Pin all QC calls to Google's free-tier image-capable Gemini model.
+    if (settings.provider !== 'gemini' || settings.endpoint !== PROVIDER_DEFAULTS.gemini.endpoint || settings.model !== PROVIDER_DEFAULTS.gemini.model) {
+      setSettings({ provider: 'gemini', endpoint: PROVIDER_DEFAULTS.gemini.endpoint, model: PROVIDER_DEFAULTS.gemini.model })
     }
     setError(''); setRaw(''); setAnalyzing(true, 'Preprocessing image…')
     try {
@@ -67,10 +67,10 @@ export function AnalyzePanel() {
       setAnalyzing(true, 'Running neural vision analysis…')
       const text = await analyzeImage({
         ...settings,
-        provider: 'openrouter',
+        provider: 'gemini',
         apiKey: '',
-        endpoint: PROVIDER_DEFAULTS.openrouter.endpoint,
-        model: PROVIDER_DEFAULTS.openrouter.model,
+        endpoint: PROVIDER_DEFAULTS.gemini.endpoint,
+        model: PROVIDER_DEFAULTS.gemini.model,
       }, dataUrl, (t) => setRaw(t))
       setAnalyzing(true, 'Parsing QC report…')
       const report = parseReport(text)
@@ -82,8 +82,8 @@ export function AnalyzePanel() {
         imageName: imageName || 'image',
         thumbnail: dataUrl,
         report,
-        provider: 'openrouter',
-        model: PROVIDER_DEFAULTS.openrouter.model,
+        provider: 'gemini',
+        model: PROVIDER_DEFAULTS.gemini.model,
       })
       setTab('report')
     } catch (e) {

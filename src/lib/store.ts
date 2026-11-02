@@ -35,17 +35,17 @@ const loadSettings = (): Settings => {
       // API credentials are kept on the server; remove any previously stored browser key.
       delete parsed.apiKey
       parsed.apiKey = ''
-      // Use the configured server-side OpenRouter account instead of legacy browser keys.
-      parsed.provider = 'openrouter'
-      parsed.endpoint = PROVIDER_DEFAULTS.openrouter.endpoint
-      parsed.model = PROVIDER_DEFAULTS.openrouter.model
+      // Use the configured server-side Gemini account instead of legacy browser keys.
+      parsed.provider = 'gemini'
+      parsed.endpoint = PROVIDER_DEFAULTS.gemini.endpoint
+      parsed.model = PROVIDER_DEFAULTS.gemini.model
       const savedMaxTokens = Number(parsed.maxTokens)
       parsed.maxTokens = Number.isFinite(savedMaxTokens) && savedMaxTokens >= 4000 ? savedMaxTokens : 4000
       try { localStorage.setItem('qc_settings', JSON.stringify(parsed)) } catch {}
       return parsed
     }
   } catch {}
-  return { provider: 'openrouter', apiKey: '', model: PROVIDER_DEFAULTS.openrouter.model, endpoint: PROVIDER_DEFAULTS.openrouter.endpoint, temperature: 0.2, maxTokens: 4000, checks: [...DEFAULT_CHECKS] }
+  return { provider: 'gemini', apiKey: '', model: PROVIDER_DEFAULTS.gemini.model, endpoint: PROVIDER_DEFAULTS.gemini.endpoint, temperature: 0.2, maxTokens: 4000, checks: [...DEFAULT_CHECKS] }
 
 }
 const loadHistory = (): RunRecord[] => {

@@ -54,6 +54,31 @@ function serveStatic(req, res) {
 }
 
 function proxyRequest(req, res) {
+  if (req.url.startsWith('/api/gemini')) {
+    if (!process.env.GEMINI_API_KEY) {
+      res.writeHead(503, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Gemini is not configured. Set GEMINI_API_KEY on the server.' }))
+      return
+    }
+    const targetPath = req.url.replace(/^\/api\/gemini/, '')
+    const options = {
+      hostname: 'generativelanguage.googleapis.com',
+      port: 443,
+      path: targetPath,
+      method: req.method,
+      headers: { ...req.headers, 'x-goog-api-key': process.env.GEMINI_API_KEY, host: 'generativelanguage.googleapis.com' },
+    }
+    const proxyReq = https.request(options, (proxyRes) => {
+      res.writeHead(proxyRes.statusCode, proxyRes.headers)
+      proxyRes.pipe(res)
+    })
+    proxyReq.on('error', (err) => {
+      res.writeHead(502)
+      res.end(JSON.stringify({ error: 'Gemini proxy error: ' + err.message }))
+    })
+    req.pipe(proxyReq)
+    return
+  }
   if (req.url.startsWith('/api/openrouter')) {
     if (!process.env.OPENROUTER_API_KEY) {
       res.writeHead(503, { 'Content-Type': 'application/json' })
@@ -107,7 +132,7 @@ function proxyRequest(req, res) {
 }
 
 const server = http.createServer((req, res) => {
-  if (req.url.startsWith('/api/opencode') || req.url.startsWith('/api/openrouter')) {
+  if (req.url.startsWith('/api/opencode') || req.url.startsWith('/api/openrouter') || req.url.startsWith('/api/gemini')) {
     proxyRequest(req, res)
   } else {
     serveStatic(req, res)

@@ -52,7 +52,7 @@ export function SetupPanel() {
                 Neural Vision Engine
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)' }}>
-                OpenRouter Free Vision · Image-capable · Server-side key
+                Gemini 3.5 Flash-Lite · Free-tier vision · Server-side key
               </div>
             </div>
           </div>
@@ -104,7 +104,7 @@ export function SetupPanel() {
         }}>
           <ShieldCheck size={13} color="var(--emerald)" style={{ flexShrink: 0 }} />
           <span>
-            Your OpenRouter credential is read by the server from <code>OPENROUTER_API_KEY</code>. It is never sent to or stored in this browser.
+            Your Gemini credential is read by the server from <code>GEMINI_API_KEY</code>. It is never sent to or stored in this browser.
           </span>
         </div>
       </div>
