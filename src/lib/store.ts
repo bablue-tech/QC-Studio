@@ -2,6 +2,17 @@ import { create } from 'zustand'
 import { PROVIDER_DEFAULTS, DEFAULT_CHECKS } from './types'
 import type { Settings, RunRecord } from './types'
 
+const PREVIOUS_DEFAULT_CHECKS = [
+  'Symmetry & proportions (left vs right ornaments)',
+  'Jewellery design consistency on both sides',
+  'Attire / costume continuity top-to-bottom',
+  'Footwear matching and correctness',
+  'Pose & anatomy naturalness',
+  'Lighting & color consistency',
+  'Background & composition cleanliness',
+  'Overall character fidelity',
+]
+
 type State = {
   settings: Settings
   image: HTMLImageElement | null
@@ -41,6 +52,10 @@ const loadSettings = (): Settings => {
       parsed.model = PROVIDER_DEFAULTS.gemini.model
       const savedMaxTokens = Number(parsed.maxTokens)
       parsed.maxTokens = Number.isFinite(savedMaxTokens) && savedMaxTokens >= 4000 ? savedMaxTokens : 4000
+      if (Array.isArray(parsed.checks) && parsed.checks.some((check: string) => PREVIOUS_DEFAULT_CHECKS.includes(check))) {
+        const customChecks = parsed.checks.filter((check: string) => !PREVIOUS_DEFAULT_CHECKS.includes(check))
+        parsed.checks = [...DEFAULT_CHECKS, ...customChecks]
+      }
       try { localStorage.setItem('qc_settings', JSON.stringify(parsed)) } catch {}
       return parsed
     }

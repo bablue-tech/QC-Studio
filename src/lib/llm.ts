@@ -3,8 +3,8 @@ import { dataUrlToBase64 } from './image'
 
 export type LLMResult = { text: string }
 
-const SYSTEM_PROMPT = (checks: string[]) => `You are a senior Quality Control (QC) reviewer for character/creature/figure imagery used in production.
-Inspect the provided image itself end-to-end. Return ONLY a complete valid JSON object (no markdown or prose) with this exact shape:
+const SYSTEM_PROMPT = (checks: string[]) => `You are a meticulous visual QC director reviewing production artwork and character renders. Inspect the uploaded image itself at full available detail. Never infer an issue from text alone and never invent unseen details.
+Return ONLY a complete valid JSON object (no markdown or prose) with this exact shape:
 {
   "overall_score": number 0-100,
   "summary": string,
@@ -15,8 +15,21 @@ Inspect the provided image itself end-to-end. Return ONLY a complete valid JSON 
   "priority_fixes": string[],
   "extra_observations": string[]
 }
-QC checks to perform (include as categories where relevant): ${checks.join('; ')}.
-Write a concise 2-3 sentence image-grounded summary. Include every requested QC category, but limit each category to at most 2 material findings and priority_fixes to at most 3 items. For symmetry, compare left vs right ornaments/jewellery. For attire, check top-to-bottom continuity and pattern breaks. For footwear, compare both shoes. Also note visible anatomy, artifacts, lighting, background, or watermark defects. Never invent details. If a category is fine, mark pass with empty findings.`
+QC checks (return one category for EACH check below, including na where genuinely inapplicable): ${checks.join('; ')}.
+
+Detailed inspection rules:
+- SKIN: Judge against the image's intended style. For photoreal or semi-realistic characters, inspect visible skin at the available resolution for natural pore detail, fine grain, tonal variation and believable subsurface texture. A waxy, airbrushed, rubbery or plastic surface is a MAIN ISSUE: mark fail and critical/high severity, explain visible evidence, and give a concrete fix. Do not demand pores on clearly painterly, stylized, distant or low-resolution skin; mark na or note limited visibility instead of guessing.
+- HAIR: inspect strand separation, hairline, roots, clumping, flyaways, volume and light response. Flag helmet-like, molded-plastic, melted or painted-on hair when visible; distinguish deliberate stylization from a defect.
+- TILAK / BINDI: if present, inspect whether the mark is complete, clean-edged, centered on the intended forehead position, correctly shaped, and not broken, doubled, blurred or floating. If absent, do not assume it is required; say absent only when relevant to the visible design.
+- EARRINGS: compare both sides for the same design, silhouette, parts, size, quantity, orientation and natural attachment to each earlobe. Explicitly mention when one side is occluded and the comparison cannot be verified.
+- NOSE PIN: when the visible character design calls for one, inspect presence, design, scale, position, side-to-side consistency where applicable, and whether it sits naturally on the nose. Do not infer gender or penalize absence without a visual design cue.
+- ATTIRE / DRAPE: trace garments from shoulder to hem. Check saree/robe folds, border, motifs, embroidery, shawls and overlapping layers for continuous pattern, consistent fabric direction, plausible folds, intact edges and missing or abruptly changed sections.
+- CROWN / HEADPIECE: check proportion, alignment, perspective, contact points, hair interaction and whether it appears naturally secured to the head rather than floating, clipping or sinking into the face.
+- BANGLES / BRACELETS / RINGS: compare visible wrists for count, design, material, size and spacing. Check rings on visible fingers for plausible scale, finger alignment and natural fit; note occlusion instead of assuming a mismatch.
+- FOOTWEAR: compare left and right shoes/sandals for design, construction, color, scale, orientation and attachment to the feet.
+- BODY: inspect anatomy, limb lengths, joints, hands, feet, pose and overall proportions for visible mismatches.
+
+Give a concise, image-grounded 2-3 sentence summary that calls out the most important pass or defect. Prioritize plastic/waxy skin and unnatural hair when present. Include no more than 2 material findings per category and 3 priority fixes. If a detail is too small, hidden, cropped or soft to judge, say so and lower confidence rather than claiming it passed.`
 
 export async function analyzeImage(settings: Settings, imageDataUrl: string, onToken?: (t: string) => void): Promise<string> {
   const { mediaType, base64 } = dataUrlToBase64(imageDataUrl)

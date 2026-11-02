@@ -10,23 +10,23 @@ const PIPELINE_NODES = [
   {
     icon: '⬡',
     label: 'Preprocess',
-    desc: 'Resize & normalize to max 1280px',
-    color: 'rgba(59,130,246,0.15)',
-    border: 'rgba(59,130,246,0.3)',
+    desc: 'Preserve fine texture up to 2048px',
+    color: 'rgba(242,118,80,0.15)',
+    border: 'rgba(242,118,80,0.3)',
   },
   {
     icon: '◈',
     label: 'Neural Vision',
     desc: 'Multimodal AI image analysis',
-    color: 'rgba(139,92,246,0.15)',
-    border: 'rgba(139,92,246,0.3)',
+    color: 'rgba(217,223,131,0.11)',
+    border: 'rgba(217,223,131,0.28)',
   },
   {
     icon: '◎',
     label: 'QC Report',
     desc: 'Structured JSON scoring',
-    color: 'rgba(6,182,212,0.12)',
-    border: 'rgba(6,182,212,0.3)',
+    color: 'rgba(233,191,105,0.12)',
+    border: 'rgba(233,191,105,0.3)',
   },
   {
     icon: '⟁',
@@ -63,7 +63,7 @@ export function AnalyzePanel() {
     }
     setError(''); setRaw(''); setAnalyzing(true, 'Preprocessing image…')
     try {
-      const { dataUrl } = await resizeImage(image, 1280, 0.85)
+      const { dataUrl } = await resizeImage(image, 2048, 0.94)
       setAnalyzing(true, 'Running neural vision analysis…')
       const text = await analyzeImage({
         ...settings,

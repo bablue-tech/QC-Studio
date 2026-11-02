@@ -1,285 +1,199 @@
 import { useStore } from '../lib/store'
 import { saveAs } from 'file-saver'
-import { Download, Copy, FileText, CheckCircle, AlertTriangle, XCircle, MinusCircle, Trophy } from 'lucide-react'
+import {
+  Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, CheckCircle2, CircleHelp,
+  Download, FileText, ShieldAlert, Sparkles, Target, Trophy, XCircle,
+} from 'lucide-react'
 
-const statusBadge = (s: string) => {
-  const map: Record<string, string> = { pass: 'badge-pass', warn: 'badge-warn', fail: 'badge-fail', na: 'badge-na' }
-  const icons: Record<string, any> = {
-    pass: <CheckCircle size={9} />,
-    warn: <AlertTriangle size={9} />,
-    fail: <XCircle size={9} />,
-    na:   <MinusCircle size={9} />,
-  }
-  return (
-    <span className={`badge ${map[s] || 'badge-na'}`}>
-      {icons[s]} {s.toUpperCase()}
-    </span>
-  )
-}
-
-const sevClass = (s: string) => {
-  const map: Record<string, string> = {
-    critical: 'sev-critical',
-    high: 'sev-high',
-    medium: 'sev-medium',
-    low: 'sev-low',
-  }
-  return map[s] || 'sev-low'
-}
-
-const scoreColor = (n: number) =>
-  n >= 75 ? 'var(--emerald)' : n >= 50 ? 'var(--amber)' : 'var(--rose)'
-
-const scoreBarClass = (n: number) =>
-  n >= 75 ? 'high' : n >= 50 ? 'mid' : 'low'
+const scoreColor = (score: number) => score >= 80 ? 'var(--good)' : score >= 60 ? 'var(--watch)' : 'var(--alert)'
+const scoreBand = (score: number) => score >= 80 ? 'strong' : score >= 60 ? 'review' : 'urgent'
 
 function ScoreRing({ score }: { score: number }) {
-  const color = scoreColor(score)
-  const r = 42
-  const circumference = 2 * Math.PI * r
-  const offset = circumference - (score / 100) * circumference
-
+  const radius = 58
+  const circumference = 2 * Math.PI * radius
+  const offset = circumference * (1 - score / 100)
   return (
-    <div className="score-ring-container">
-      <div className="score-ring" style={{ '--ring-color': color + '66' } as any}>
-        <svg width="110" height="110" viewBox="0 0 110 110">
-          {/* Track */}
-          <circle cx="55" cy="55" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
-          {/* Progress */}
-          <circle
-            cx="55" cy="55" r={r}
-            fill="none"
-            stroke={color}
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            style={{ transition: 'stroke-dashoffset 1.4s cubic-bezier(0.22,1,0.36,1)', filter: `drop-shadow(0 0 8px ${color})` }}
-          />
-        </svg>
-        <div className="score-ring-inner">
-          <span className="score-num" style={{ color, fontFamily: 'var(--font-display)' }}>{score}</span>
-          <span className="score-denom">/ 100</span>
-        </div>
-      </div>
-      <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', letterSpacing: 1.5, textTransform: 'uppercase' }}>
-        Overall Score
+    <div className="visual-score-wrap" aria-label={`Overall QC score ${score} out of 100`}>
+      <svg className="visual-score-ring" viewBox="0 0 148 148" role="img" aria-hidden="true">
+        <circle className="visual-score-track" cx="74" cy="74" r={radius} />
+        <circle className="visual-score-progress" cx="74" cy="74" r={radius}
+          style={{ strokeDasharray: circumference, strokeDashoffset: offset, stroke: scoreColor(score) }} />
+      </svg>
+      <div className="visual-score-center">
+        <strong>{score}</strong>
+        <span>QUALITY INDEX</span>
       </div>
     </div>
   )
 }
 
+function QualityRadar({ categories }: { categories: any[] }) {
+  const items = categories.slice(0, 8)
+  if (items.length < 3) return (
+    <div className="radar-empty"><Activity size={18} /><span>More categories are needed to map a quality profile.</span></div>
+  )
+  const center = 120
+  const radius = 85
+  const point = (i: number, value: number) => {
+    const angle = i / items.length * Math.PI * 2 - Math.PI / 2
+    const r = radius * Math.max(0, Math.min(100, Number(value) || 0)) / 100
+    return `${center + Math.cos(angle) * r},${center + Math.sin(angle) * r}`
+  }
+  const axisPoint = (i: number) => {
+    const angle = i / items.length * Math.PI * 2 - Math.PI / 2
+    return `${center + Math.cos(angle) * radius},${center + Math.sin(angle) * radius}`
+  }
+
+  return (
+    <div className="radar-wrap">
+      <svg className="quality-radar" viewBox="0 0 240 240" role="img" aria-label="Radar chart showing QC category scores">
+        {[20, 40, 60, 80, 100].map(level => (
+          <polygon key={level} className="radar-grid" points={items.map((_, i) => axisPoint(i).split(',').map(n => center + (Number(n) - center) * level / 100).join(',')).join(' ')} />
+        ))}
+        {items.map((_, i) => <line key={`axis-${i}`} className="radar-axis" x1={center} y1={center} x2={axisPoint(i).split(',')[0]} y2={axisPoint(i).split(',')[1]} />)}
+        <polygon className="radar-area" points={items.map((item, i) => point(i, item.score)).join(' ')} />
+        {items.map((item, i) => {
+          const [cx, cy] = point(i, item.score).split(',')
+          return <circle key={`point-${i}`} className="radar-point" cx={cx} cy={cy} r="3.2" />
+        })}
+      </svg>
+      <div className="radar-caption"><span className="radar-caption-dot" /> Category score <span>·</span> outer edge = 100</div>
+    </div>
+  )
+}
+
+function StatusPill({ status }: { status: string }) {
+  const state = ['pass', 'warn', 'fail', 'na'].includes(status) ? status : 'na'
+  const Icon = state === 'pass' ? CheckCircle2 : state === 'fail' ? XCircle : state === 'warn' ? AlertTriangle : CircleHelp
+  return <span className={`visual-status ${state}`}><Icon size={13} /> {state === 'na' ? 'NOT VISIBLE' : state.toUpperCase()}</span>
+}
+
 export function ReportPanel() {
-  const report    = useStore((s) => s.report)
+  const report = useStore((s) => s.report)
   const imageName = useStore((s) => s.imageName)
 
   if (!report) return (
     <div className="empty-state">
-      <div className="empty-icon">◎</div>
-      <p style={{ color: 'var(--text-soft)', fontSize: 14, fontFamily: 'var(--font-display)', fontWeight: 600 }}>
-        No Report Generated
-      </p>
-      <p style={{ color: 'var(--text-muted)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>
-        Run an analysis on the Analyze tab first
-      </p>
+      <div className="empty-icon"><Activity size={34} /></div>
+      <p className="empty-state-title">Your visual report will appear here</p>
+      <p className="empty-state-copy">Upload a character image and start a QC review.</p>
     </div>
   )
 
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' })
-    saveAs(blob, `${imageName || 'qc'}_report.json`)
-  }
+  const categories = Array.isArray(report.categories) ? report.categories : []
+  const score = Math.max(0, Math.min(100, Number(report.overall_score) || 0))
+  const passed = categories.filter((category: any) => category.status === 'pass').length
+  const attention = categories.filter((category: any) => category.status === 'warn' || category.status === 'fail').length
+  const critical = categories.reduce((total: number, category: any) => total + (Array.isArray(category.findings) ? category.findings.filter((finding: any) => finding.severity === 'critical').length : 0), 0)
+  const firstAttention = categories.findIndex((category: any) => category.status === 'warn' || category.status === 'fail')
+
+  const exportJson = () => saveAs(new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' }), `${imageName || 'qc'}_report.json`)
   const exportMd = () => {
-    let md = `# QC Report — ${imageName}\n\nScore: ${report.overall_score}/100\n\n${report.summary}\n\n`
-    report.categories?.forEach((c: any) => {
-      md += `## ${c.name} — ${c.status.toUpperCase()} (${c.score})\n`
-      c.findings?.forEach((f: any) => {
-        md += `- [${f.severity}] ${f.issue}${f.location ? ` (${f.location})` : ''}\n  - Fix: ${f.fix}\n`
+    let md = `# QC Review — ${imageName || 'Image'}\n\nScore: ${score}/100\n\n${report.summary || ''}\n\n`
+    categories.forEach((category: any) => {
+      md += `## ${category.name} — ${(category.status || 'na').toUpperCase()} (${category.score ?? 0})\n`
+      ;(category.findings || []).forEach((finding: any) => {
+        md += `- [${finding.severity || 'note'}] ${finding.issue || ''}${finding.location ? ` (${finding.location})` : ''}\n  - Fix: ${finding.fix || 'Review manually'}\n`
       })
       md += '\n'
     })
-    md += `## Priority Fixes\n${(report.priority_fixes || []).map((x: string) => `- ${x}`).join('\n')}\n`
-    const blob = new Blob([md], { type: 'text/markdown' })
-    saveAs(blob, `${imageName || 'qc'}_report.md`)
+    md += `## Priority Fixes\n${(report.priority_fixes || []).map((fix: string) => `- ${fix}`).join('\n')}\n`
+    saveAs(new Blob([md], { type: 'text/markdown' }), `${imageName || 'qc'}_report.md`)
   }
-  const copy = async () => { await navigator.clipboard.writeText(JSON.stringify(report, null, 2)) }
-
-  const score = report.overall_score ?? 0
-  const textResponse = [
-    `QC REVIEW — ${imageName || 'Image'}`,
-    `Overall score: ${score}/100`,
-    '',
-    'SUMMARY',
-    report.summary || 'No summary was provided.',
-    '',
-    'CATEGORY RESULTS',
-    ...(report.categories || []).flatMap((category: any) => [
-      `${category.name} — ${(category.status || 'na').toUpperCase()} (${category.score ?? '—'}/100)`,
-      ...(category.findings?.length
-        ? category.findings.flatMap((finding: any) => [
-            `  • [${finding.severity || 'note'}] ${finding.issue || 'Finding'}`,
-            ...(finding.location ? [`    Location: ${finding.location}`] : []),
-            ...(finding.fix ? [`    Suggested fix: ${finding.fix}`] : []),
-          ])
-        : ['  No material issues detected.']),
-    ]),
-    ...(report.priority_fixes?.length ? ['', 'PRIORITY FIXES', ...report.priority_fixes.map((fix: string, i: number) => `${i + 1}. ${fix}`)] : []),
-    ...(report.extra_observations?.length ? ['', 'ADDITIONAL OBSERVATIONS', ...report.extra_observations.map((note: string) => `• ${note}`)] : []),
-  ].join('\n')
-
-  const copyTextResponse = async () => { await navigator.clipboard.writeText(textResponse) }
+  const copyJson = async () => { await navigator.clipboard.writeText(JSON.stringify(report, null, 2)) }
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 28px' }}>
-
-      {/* ── Header Row ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20, marginBottom: 28 }}>
+    <div className="report-visualizer">
+      <header className="report-heading">
         <div>
-          <div className="section-label" style={{ marginBottom: 10 }}>
-            <Trophy size={11} />
-            QC Analysis Report
-          </div>
-          <div style={{
-            fontFamily: 'var(--font-display)', fontSize: 22, fontWeight: 800,
-            color: 'var(--text-bright)', marginBottom: 4,
-          }}>
-            {imageName || 'Analysis Complete'}
-          </div>
-          <div style={{ fontSize: 11.5, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
-            {report.categories?.length ?? 0} categories · {(report.priority_fixes?.length ?? 0)} priority fixes
-          </div>
+          <div className="report-kicker"><span className="kicker-orbit"><Sparkles size={13} /></span> CHARACTER QUALITY INTELLIGENCE</div>
+          <h1>{imageName || 'Visual QC report'}</h1>
+          <p>{report.summary}</p>
         </div>
+        <div className="report-actions">
+          <button className="btn-ghost" onClick={exportMd}><FileText size={14} /> Export report</button>
+          <button className="btn-ghost" onClick={exportJson}><Download size={14} /> Export data</button>
+          <button className="btn-ghost" onClick={copyJson}><FileText size={14} /> Copy data</button>
+        </div>
+      </header>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+      <section className="report-overview">
+        <article className={`score-feature ${scoreBand(score)}`}>
+          <div className="feature-orbit feature-orbit-one" />
+          <div className="feature-orbit feature-orbit-two" />
+          <div className="score-feature-copy">
+            <span className="feature-index">01 / OVERALL READ</span>
+            <h2>{score >= 80 ? 'Strong finish' : score >= 60 ? 'Review details' : 'Needs attention'}</h2>
+            <p>{attention ? `${attention} of ${categories.length} checks need a closer look.` : 'No significant issues were flagged in the visible details.'}</p>
+            <div className="score-feature-meta"><span><i className="live-dot" /> VISION REVIEW</span><span>{categories.length} CHECKS</span></div>
+          </div>
           <ScoreRing score={score} />
+        </article>
 
-          {/* Export Actions */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button className="btn-ghost" onClick={copyTextResponse} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Copy size={11} /> Copy text response
-            </button>
-            <button className="btn-ghost" onClick={exportJson} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Download size={11} /> Export JSON
-            </button>
-            <button className="btn-ghost" onClick={exportMd} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <FileText size={11} /> Export MD
-            </button>
-            <button className="btn-ghost" onClick={copy} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Copy size={11} /> Copy JSON
-            </button>
-          </div>
-        </div>
-      </div>
+        <article className="visual-card radar-card">
+          <div className="visual-card-head"><div><span className="feature-index">02 / CATEGORY MAP</span><h3>Quality profile</h3></div><Target size={18} /></div>
+          <QualityRadar categories={categories} />
+        </article>
+      </section>
 
-      {/* ── Summary Card ── */}
-      <div className="card" style={{
-        padding: '20px 22px', marginBottom: 24,
-        background: 'linear-gradient(135deg, rgba(37,99,235,0.06), rgba(99,102,241,0.04))',
-      }}>
-        <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)', letterSpacing: 1.5, textTransform: 'uppercase', marginBottom: 10 }}>
-          Summary
-        </div>
-        <p style={{ fontSize: 14, color: 'var(--text-base)', lineHeight: 1.75, margin: 0 }}>
-          {report.summary}
-        </p>
-      </div>
+      <section className="signal-strip" aria-label="Quality check totals">
+        <article className="signal-tile"><span className="signal-icon good"><CheckCircle2 size={16} /></span><div><strong>{passed}</strong><span>Clear checks</span></div><span className="signal-mark">01</span></article>
+        <article className="signal-tile"><span className="signal-icon watch"><Activity size={16} /></span><div><strong>{attention}</strong><span>Need review</span></div><span className="signal-mark">02</span></article>
+        <article className="signal-tile"><span className="signal-icon alert"><ShieldAlert size={16} /></span><div><strong>{critical}</strong><span>Critical findings</span></div><span className="signal-mark">03</span></article>
+        <article className="signal-tile"><span className="signal-icon neutral"><Trophy size={16} /></span><div><strong>{categories.length}</strong><span>Categories scanned</span></div><span className="signal-mark">04</span></article>
+      </section>
 
-      <div className="card text-response-card" style={{ padding: '18px 22px', marginBottom: 24 }}>
-        <div className="text-response-heading">
-          <div className="section-label" style={{ margin: 0 }}>Plain-text response</div>
-          <button className="btn-ghost" onClick={copyTextResponse} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Copy size={11} /> Copy text
-          </button>
-        </div>
-        <pre className="text-response-content">{textResponse}</pre>
-      </div>
-
-      {/* ── Categories ── */}
-      <div className="section-label" style={{ marginBottom: 14 }}>
-        Categories · {report.categories?.length ?? 0} checked
-      </div>
-      <div className="report-categories" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(460px, 1fr))', gap: 14, marginBottom: 24 }}>
-        {report.categories?.map((c: any, i: number) => (
-          <div key={i} className="card" style={{ padding: 18 }}>
-            {/* Category Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-bright)', fontFamily: 'var(--font-display)' }}>
-                {c.name}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: scoreColor(c.score), fontWeight: 700 }}>
-                  {c.score}/100
-                </span>
-                {statusBadge(c.status)}
-              </div>
-            </div>
-
-            {/* Score Bar */}
-            <div className="score-bar" style={{ marginBottom: 14 }}>
-              <div className={`score-bar-fill ${scoreBarClass(c.score)}`} style={{ width: `${c.score}%` }} />
-            </div>
-
-            {/* Findings */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {c.findings?.length ? c.findings.map((f: any, j: number) => (
-                <div key={j} className="finding-card">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5, flexWrap: 'wrap' }}>
-                    <span className={sevClass(f.severity)}>{f.severity}</span>
-                    <span style={{ fontSize: 12.5, fontWeight: 500, color: 'var(--text-base)' }}>{f.issue}</span>
-                  </div>
-                  {f.location && (
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', marginBottom: 5 }}>
-                      ⌖ {f.location}
-                    </div>
-                  )}
-                  <div style={{ fontSize: 12, color: 'var(--text-soft)' }}>
-                    <span style={{ color: 'var(--neon)', marginRight: 5 }}>→</span>{f.fix}
-                  </div>
-                </div>
-              )) : (
-                <div style={{ fontSize: 12, color: 'var(--emerald)', fontFamily: 'var(--font-mono)', opacity: 0.85, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <CheckCircle size={12} /> No issues detected
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Priority Fixes ── */}
       {report.priority_fixes?.length > 0 && (
-        <div className="card" style={{ padding: '20px 22px', marginBottom: 16 }}>
-          <div className="section-label" style={{ marginBottom: 14 }}>
-            <AlertTriangle size={11} color="var(--amber)" />
-            <span style={{ color: 'var(--amber)' }}>Priority Fixes</span>
-          </div>
-          <ol style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {report.priority_fixes.map((x: string, i: number) => (
-              <li key={i} style={{ fontSize: 13.5, color: 'var(--text-base)', lineHeight: 1.65 }}>
-                <span style={{ color: 'var(--amber)', marginRight: 8, fontFamily: 'var(--font-mono)', fontSize: 11 }}>
-                  #{String(i + 1).padStart(2, '0')}
-                </span>
-                {x}
-              </li>
+        <section className="priority-deck">
+          <div className="priority-head"><div><span className="feature-index">03 / RECOMMENDED NEXT</span><h2>Fix these first</h2></div><span className="priority-count">{String(report.priority_fixes.length).padStart(2, '0')} ACTIONS</span></div>
+          <div className="priority-grid">
+            {report.priority_fixes.map((fix: string, i: number) => (
+              <article className="priority-item" key={i} style={{ animationDelay: `${i * 90}ms` }}>
+                <span className="priority-number">{String(i + 1).padStart(2, '0')}</span><p>{fix}</p><ArrowUpRight size={15} />
+              </article>
             ))}
-          </ol>
-        </div>
+          </div>
+        </section>
       )}
 
-      {/* ── Extra Observations ── */}
-      {report.extra_observations?.length > 0 && (
-        <div className="card" style={{ padding: '20px 22px' }}>
-          <div className="section-label" style={{ marginBottom: 14 }}>Additional Observations</div>
-          <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {report.extra_observations.map((x: string, i: number) => (
-              <li key={i} style={{ fontSize: 13, color: 'var(--text-soft)', display: 'flex', gap: 10 }}>
-                <span style={{ color: 'var(--azure)', flexShrink: 0, marginTop: 1 }}>◈</span>
-                {x}
-              </li>
-            ))}
-          </ul>
+      <section className="category-section">
+        <div className="category-section-head"><div><span className="feature-index">04 / DETAIL SCAN</span><h2>Craft &amp; consistency</h2><p>Open a signal to inspect the visual evidence and suggested fix.</p></div><span className="scan-stamp"><Activity size={12} /> {categories.length} VISUAL SIGNALS</span></div>
+        <div className="visual-category-list">
+          {categories.map((category: any, i: number) => {
+            const value = Math.max(0, Math.min(100, Number(category.score) || 0))
+            const findings = Array.isArray(category.findings) ? category.findings : []
+            const impact = findings.some((finding: any) => finding.severity === 'critical' || finding.severity === 'high')
+            return (
+              <details className={`visual-category ${category.status || 'na'}`} key={`${category.name}-${i}`} open={i === firstAttention} style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}>
+                <summary>
+                  <span className="category-index">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="category-main"><strong>{category.name}</strong><span>{findings.length ? `${findings.length} finding${findings.length === 1 ? '' : 's'}${impact ? ' · high impact' : ''}` : 'No visible defect flagged'}</span></span>
+                  <span className="category-meter"><span style={{ width: `${value}%`, background: scoreColor(value) }} /></span>
+                  <span className="category-score" style={{ color: scoreColor(value) }}>{value}<small>/100</small></span>
+                  <StatusPill status={category.status || 'na'} />
+                  <ArrowDownRight className="category-chevron" size={16} />
+                </summary>
+                <div className="category-detail">
+                  {findings.length ? findings.map((finding: any, j: number) => (
+                    <article className={`visual-finding ${finding.severity || 'low'}`} key={j}>
+                      <div className="finding-topline"><span className={`finding-severity ${finding.severity || 'low'}`}>{(finding.severity || 'note').toUpperCase()}</span>{finding.location && <span className="finding-location">{finding.location}</span>}</div>
+                      <h4>{finding.issue}</h4>
+                      <p><ArrowUpRight size={13} /> {finding.fix || 'Review this detail at full resolution.'}</p>
+                    </article>
+                  )) : (
+                    <div className="all-clear"><CheckCircle2 size={17} /><span>Nothing visibly inconsistent in this category.</span></div>
+                  )}
+                </div>
+              </details>
+            )
+          })}
         </div>
+      </section>
+
+      {report.extra_observations?.length > 0 && (
+        <section className="observation-rail"><Sparkles size={15} /><div><span className="feature-index">ADDITIONAL SIGNALS</span><p>{report.extra_observations.join('  ·  ')}</p></div></section>
       )}
     </div>
   )
 }
+
