@@ -56,9 +56,3 @@ export const PROVIDER_DEFAULTS: Record<Provider, { endpoint: string; model: stri
   openrouter: { endpoint: '/api/openrouter/api/v1/chat/completions', model: 'openai/gpt-4o' },
   custom: { endpoint: '', model: '' },
 }
-
-/** Pre-filled OpenCode API key */
-export const OPENCODE_API_KEY = 'oc_sk_23ed4e7448bd_5MS4TpmFa89S4a_GTqmGfcnXUmbxB6iq'
-
-/** Pre-filled OpenRouter API key */
-export const OPENROUTER_API_KEY = 'v1-659ecc54c36de8f896b159586e3d08d268f591aef81707dbbff09749b491304e'

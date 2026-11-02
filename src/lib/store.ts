@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { PROVIDER_DEFAULTS, DEFAULT_CHECKS, OPENROUTER_API_KEY } from './types'
+import { PROVIDER_DEFAULTS, DEFAULT_CHECKS } from './types'
 import type { Settings, RunRecord } from './types'
 
 type State = {
@@ -32,27 +32,20 @@ const loadSettings = (): Settings => {
     const raw = localStorage.getItem('qc_settings')
     if (raw) {
       const parsed = JSON.parse(raw)
-      // migrate opencode provider to openrouter
-      if (parsed.provider === 'opencode') {
-        parsed.provider = 'openrouter'
-        parsed.apiKey = OPENROUTER_API_KEY
-        parsed.endpoint = PROVIDER_DEFAULTS.openrouter.endpoint
-        parsed.model = PROVIDER_DEFAULTS.openrouter.model
-      }
-      // migrate old openrouter API key to new one
-      if (parsed.provider === 'openrouter' && parsed.apiKey === 'oc_sk_fe53ce320478_pR4071BE3ljZVZKkElPsvVwPFM6ieKZj') {
-        parsed.apiKey = OPENROUTER_API_KEY
-      }
-      if (parsed.provider === 'openrouter' && parsed.apiKey === 'oc_sk_23ed4e7448bd_5MS4TpmFa89S4a_GTqmGfcnXUmbxB6iq') {
-        parsed.apiKey = OPENROUTER_API_KEY
-      }
+      // API credentials are kept on the server; remove any previously stored browser key.
+      delete parsed.apiKey
+      parsed.apiKey = ''
+      // Use the configured server-side OpenCode account instead of legacy browser keys.
+      parsed.provider = 'opencode'
+      parsed.endpoint = PROVIDER_DEFAULTS.opencode.endpoint
+      parsed.model = PROVIDER_DEFAULTS.opencode.model
+      try { localStorage.setItem('qc_settings', JSON.stringify(parsed)) } catch {}
       return parsed
     }
   } catch {}
-  return { provider: 'openrouter', apiKey: OPENROUTER_API_KEY, model: PROVIDER_DEFAULTS.openrouter.model, endpoint: PROVIDER_DEFAULTS.openrouter.endpoint, temperature: 0.2, maxTokens: 2000, checks: [...DEFAULT_CHECKS] }
+  return { provider: 'opencode', apiKey: '', model: PROVIDER_DEFAULTS.opencode.model, endpoint: PROVIDER_DEFAULTS.opencode.endpoint, temperature: 0.2, maxTokens: 2000, checks: [...DEFAULT_CHECKS] }
 
 }
-
 const loadHistory = (): RunRecord[] => {
   try {
     const raw = localStorage.getItem('qc_history')
@@ -73,7 +66,7 @@ export const useStore = create<State>((set) => ({
   report: null,
   error: '',
   history: loadHistory(),
-  activeTab: 'setup',
+  activeTab: 'analyze',
   setTab: (t) => set({ activeTab: t }),
   setSettings: (p) => set((s) => {
     const next = { ...s.settings, ...p }
@@ -82,6 +75,8 @@ export const useStore = create<State>((set) => ({
       next.endpoint = PROVIDER_DEFAULTS[p.provider].endpoint || next.endpoint
       next.model = PROVIDER_DEFAULTS[p.provider].model || next.model
     }
+    // Never persist API credentials in browser storage.
+    next.apiKey = ''
     try { localStorage.setItem('qc_settings', JSON.stringify(next)) } catch {}
     return { settings: next }
   }),

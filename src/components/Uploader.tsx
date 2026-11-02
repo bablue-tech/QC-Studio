@@ -47,7 +47,7 @@ export function Uploader() {
           marginBottom: 8,
           position: 'relative', zIndex: 1,
         }}>
-          {isDragActive ? 'Release to Analyze' : 'Drop Your Image Here'}
+          {isDragActive ? 'Release to add image' : 'Drop an image to begin'}
         </p>
         <p style={{
           fontSize: 13,
@@ -55,7 +55,7 @@ export function Uploader() {
           marginBottom: 24,
           position: 'relative', zIndex: 1,
         }}>
-          PNG · JPG · WEBP · GIF — processed entirely in-browser
+          PNG, JPG, or WEBP · Your image is sent to the selected vision service for review
         </p>
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>

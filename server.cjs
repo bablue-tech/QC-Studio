@@ -3,6 +3,16 @@ const https = require('https')
 const fs = require('fs')
 const path = require('path')
 
+// Load local secrets for development deployments without committing them.
+const envPath = path.join(__dirname, '.env.local')
+if (fs.existsSync(envPath)) {
+  for (const line of fs.readFileSync(envPath, 'utf8').split(/\r?\n/)) {
+    const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/)
+    if (!match || process.env[match[1]]) continue
+    process.env[match[1]] = match[2].replace(/^(['"])(.*)\1$/, '$2')
+  }
+}
+
 const PORT = process.env.PORT || 3000
 const DIST_DIR = path.join(__dirname, 'dist')
 
@@ -65,12 +75,17 @@ function proxyRequest(req, res) {
     return
   }
   const targetPath = req.url.replace(/^\/api\/opencode/, '')
+  if (!process.env.OPENCODE_API_KEY) {
+    res.writeHead(503, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ error: 'OpenCode is not configured. Set OPENCODE_API_KEY on the server.' }))
+    return
+  }
   const options = {
     hostname: 'opencode.ai',
     port: 443,
     path: '/inference/openai' + targetPath,
     method: req.method,
-    headers: { ...req.headers, host: 'opencode.ai' },
+    headers: { ...req.headers, authorization: `Bearer ${process.env.OPENCODE_API_KEY}`, host: 'opencode.ai' },
   }
 
   const proxyReq = https.request(options, (proxyRes) => {

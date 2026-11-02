@@ -162,7 +162,7 @@ export function ReportPanel() {
       <div className="section-label" style={{ marginBottom: 14 }}>
         Categories · {report.categories?.length ?? 0} checked
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(460px, 1fr))', gap: 14, marginBottom: 24 }}>
+      <div className="report-categories" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(460px, 1fr))', gap: 14, marginBottom: 24 }}>
         {report.categories?.map((c: any, i: number) => (
           <div key={i} className="card" style={{ padding: 18 }}>
             {/* Category Header */}

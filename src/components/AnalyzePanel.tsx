@@ -56,7 +56,7 @@ export function AnalyzePanel() {
 
   const run = async () => {
     if (!image) { setError('Upload an image first.'); return }
-    if (!settings.apiKey) { setError('Neural engine configuration required. Check Settings tab.'); return }
+    if (settings.provider !== 'opencode' && !settings.apiKey) { setError('Add an API key in Settings before running an analysis.'); return }
     // ensure providers use proxied endpoint to avoid CORS
     if (settings.provider === 'opencode' && !settings.endpoint.startsWith('/api/opencode')) {
       setSettings({ endpoint: '/api/opencode/v1/chat/completions' })
@@ -94,11 +94,16 @@ export function AnalyzePanel() {
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 28px' }}>
       {!image ? (
         <div>
+          <div className="analyze-intro">
+            <p className="intro-kicker">VISUAL QUALITY CONTROL</p>
+            <h1>Make every detail<br /><em>ready for review.</em></h1>
+            <p>Upload an image to receive a clear, structured assessment of consistency, finish, and presentation.</p>
+          </div>
           {/* Upload Section */}
           <div style={{ marginBottom: 32 }}>
             <div className="section-label" style={{ marginBottom: 20 }}>
               <ScanLine size={11} />
-              Image Input Node
+              Start a review
             </div>
             <Uploader />
           </div>
@@ -106,7 +111,7 @@ export function AnalyzePanel() {
           {/* Pipeline Nodes */}
           <div className="section-label" style={{ marginBottom: 16 }}>
             <Layers size={11} />
-            Analysis Pipeline
+            What your review includes
           </div>
           <div style={{ display: 'flex', gap: 0, alignItems: 'stretch', flexWrap: 'wrap' }}>
             {PIPELINE_NODES.map((node, i) => (
@@ -132,12 +137,12 @@ export function AnalyzePanel() {
           </div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }}>
+        <div className="review-workspace" style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 24, alignItems: 'start' }}>
           {/* Image Preview */}
           <div>
             <div className="section-label" style={{ marginBottom: 14 }}>
               <ScanLine size={11} />
-              Image Preview Node
+              Image preview
             </div>
             <div className="card card-glow" style={{ padding: 14, position: 'relative' }}>
               <img
@@ -201,7 +206,7 @@ export function AnalyzePanel() {
             <div className="engine-card">
               <div className="engine-label">
                 <Zap size={9} />
-                Neural QC Engine · Active
+              Visual review · Ready
               </div>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-bright)', fontFamily: 'var(--font-display)', marginBottom: 4 }}>
                 Visual Intelligence System
@@ -227,7 +232,7 @@ export function AnalyzePanel() {
               ) : (
                 <>
                   <ScanLine size={14} />
-                  Run QC Analysis
+                Run visual review
                 </>
               )}
             </button>

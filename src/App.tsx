@@ -13,15 +13,6 @@ const tabs = [
   { id: 'setup',   label: 'Settings', icon: Settings,   num: '04' },
 ] as const
 
-const MARQUEE_TEXT = [
-  { label: 'Developed & Designed by', hl: 'Sai Charan Sandeveni' },
-  { label: 'Powered by', hl: 'Neural Vision Engine' },
-  { label: '', hl: 'Character & Brand Compliance' },
-  { label: '', hl: 'Zero Credentials Stored' },
-  { label: '', hl: 'Multimodal AI Analysis' },
-  { label: 'Real-time', hl: 'QC Scoring & Reporting' },
-]
-
 export default function App() {
   const activeTab = useStore((s) => s.activeTab)
   const setTab    = useStore((s) => s.setTab)
@@ -59,7 +50,7 @@ export default function App() {
             </div>
             <div className="sys-badge">
               <div className="pulse-dot" />
-              <span>SYSTEM ONLINE</span>
+              <span>READY FOR REVIEW</span>
             </div>
           </div>
         </header>
@@ -115,23 +106,10 @@ export default function App() {
           {activeTab === 'setup'   && <div className="panel-enter" key="setup"><SetupPanel /></div>}
         </main>
 
-        {/* ── Marquee Footer ── */}
+        {/* ── Footer ── */}
         <footer className="app-footer">
-          <div className="marquee-track">
-            {[0, 1].map(idx => (
-              <div key={idx} className="marquee-content">
-                {MARQUEE_TEXT.map((item, i) => (
-                  <span key={i}>
-                    {item.label && <>{item.label} </>}
-                    <span className="hl">{item.hl}</span>
-                    {i < MARQUEE_TEXT.length - 1 && (
-                      <span className="marquee-sep" style={{ margin: '0 24px' }}>◈</span>
-                    )}
-                  </span>
-                ))}
-              </div>
-            ))}
-          </div>
+          <span>BRANDGUARD <span className="footer-separator">/</span> QUALITY REVIEW WORKSPACE</span>
+          <span>Private by design <span className="footer-separator">·</span> Built for careful review</span>
         </footer>
       </div>
     </>

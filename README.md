@@ -1,32 +1,11 @@
-# React + TypeScript + Vite
+# BrandGuard QC Studio
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+BrandGuard is a visual quality-control workspace for reviewing character and product imagery. Upload an image, run a structured vision review, and export or revisit the resulting report.
 
-Currently, two official plugins are available:
+## Run locally
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Create `.env.local` with `OPENCODE_API_KEY=your_key`.
+2. Run `npm install` and `npm run dev` for the Vite development server.
+3. For the production server, run `npm run build` and then `npm start`. Set `OPENCODE_API_KEY` in the server environment.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+The OpenCode credential is added by the server proxy and is not stored in browser storage or bundled into the frontend. `.env.local` is ignored by Git.

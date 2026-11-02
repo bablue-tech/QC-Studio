@@ -52,7 +52,7 @@ export function SetupPanel() {
                 Neural Vision Engine
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)' }}>
-                Vision-capable · Multimodal AI · Zero cost
+            Vision-capable · Multimodal AI · Server-side credentials
               </div>
             </div>
           </div>
@@ -104,7 +104,7 @@ export function SetupPanel() {
         }}>
           <ShieldCheck size={13} color="var(--emerald)" style={{ flexShrink: 0 }} />
           <span>
-            The AI engine is pre-configured and ready to use. No API keys or credentials are required — simply upload an image and run your QC analysis.
+            Your OpenCode credential is read by the server from <code>OPENCODE_API_KEY</code>. It is never sent to or stored in this browser.
           </span>
         </div>
       </div>
