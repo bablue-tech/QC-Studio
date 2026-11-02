@@ -39,11 +39,13 @@ const loadSettings = (): Settings => {
       parsed.provider = 'openrouter'
       parsed.endpoint = PROVIDER_DEFAULTS.openrouter.endpoint
       parsed.model = PROVIDER_DEFAULTS.openrouter.model
+      const savedMaxTokens = Number(parsed.maxTokens)
+      parsed.maxTokens = Number.isFinite(savedMaxTokens) && savedMaxTokens >= 4000 ? savedMaxTokens : 4000
       try { localStorage.setItem('qc_settings', JSON.stringify(parsed)) } catch {}
       return parsed
     }
   } catch {}
-  return { provider: 'openrouter', apiKey: '', model: PROVIDER_DEFAULTS.openrouter.model, endpoint: PROVIDER_DEFAULTS.openrouter.endpoint, temperature: 0.2, maxTokens: 2000, checks: [...DEFAULT_CHECKS] }
+  return { provider: 'openrouter', apiKey: '', model: PROVIDER_DEFAULTS.openrouter.model, endpoint: PROVIDER_DEFAULTS.openrouter.endpoint, temperature: 0.2, maxTokens: 4000, checks: [...DEFAULT_CHECKS] }
 
 }
 const loadHistory = (): RunRecord[] => {

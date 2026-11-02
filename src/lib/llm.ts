@@ -4,7 +4,7 @@ import { dataUrlToBase64 } from './image'
 export type LLMResult = { text: string }
 
 const SYSTEM_PROMPT = (checks: string[]) => `You are a senior Quality Control (QC) reviewer for character/creature/figure imagery used in production.
-Analyze the provided image end-to-end and return ONLY a valid JSON object (no markdown, no prose) with this exact shape:
+Inspect the provided image itself end-to-end. Return ONLY a complete valid JSON object (no markdown or prose) with this exact shape:
 {
   "overall_score": number 0-100,
   "summary": string,
@@ -16,7 +16,7 @@ Analyze the provided image end-to-end and return ONLY a valid JSON object (no ma
   "extra_observations": string[]
 }
 QC checks to perform (include as categories where relevant): ${checks.join('; ')}.
-Be specific and actionable. For symmetry, compare left vs right ornaments/jewellery and note mismatches in size/position/design. For attire, check top-to-bottom continuity, pattern breaks, asymmetry, missing elements. For footwear, check both shoes match and are correct. Also report any other defects you notice (anatomy, artifacts, lighting, background, text/watermarks). If an area is fine, mark pass with empty findings.`
+Write a concise 2-3 sentence image-grounded summary. Include every requested QC category, but limit each category to at most 2 material findings and priority_fixes to at most 3 items. For symmetry, compare left vs right ornaments/jewellery. For attire, check top-to-bottom continuity and pattern breaks. For footwear, compare both shoes. Also note visible anatomy, artifacts, lighting, background, or watermark defects. Never invent details. If a category is fine, mark pass with empty findings.`
 
 export async function analyzeImage(settings: Settings, imageDataUrl: string, onToken?: (t: string) => void): Promise<string> {
   const { mediaType, base64 } = dataUrlToBase64(imageDataUrl)
@@ -39,11 +39,18 @@ export async function analyzeImage(settings: Settings, imageDataUrl: string, onT
     // request json for openai-compatible providers
     if (settings.provider === 'openai' || settings.provider === 'openrouter') body.response_format = { type: 'json_object' }
     try {
-      const res = await fetch(settings.endpoint, {
+      const request = (maxTokens: number) => fetch(settings.endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...body, max_tokens: maxTokens }),
       })
+      const initialMaxTokens = Math.max(settings.maxTokens, 4000)
+      let res = await request(initialMaxTokens)
+      let data = res.ok ? await res.json() : null
+      if (res.ok && data?.choices?.[0]?.finish_reason === 'length' && initialMaxTokens < 8000) {
+        res = await request(8000)
+        data = res.ok ? await res.json() : null
+      }
       if (!res.ok) {
         const body = await res.text()
         if (body.includes('FreeUsageLimitError')) throw new Error('Free model usage limit reached. Please wait and try again later.')
@@ -52,7 +59,6 @@ export async function analyzeImage(settings: Settings, imageDataUrl: string, onT
         if (res.status === 403) throw new Error('Access forbidden. The AI service may be blocking browser requests.')
         throw new Error(`${settings.provider} error ${res.status}: ${body}`)
       }
-      const data = await res.json()
       const content = data?.choices?.[0]?.message?.content
       const text = typeof content === 'string'
         ? content
@@ -62,7 +68,7 @@ export async function analyzeImage(settings: Settings, imageDataUrl: string, onT
       if (!text.trim()) {
         const reason = data?.choices?.[0]?.finish_reason
         throw new Error(reason === 'length'
-          ? 'The free vision model ran out of response space. Increase Response Length in Settings and retry.'
+          ? 'The free vision model still could not fit the complete report after an automatic retry. Try again with fewer QC checks.'
           : 'The free vision model returned an empty analysis. Please retry the image review.')
       }
       onToken?.(text)
