@@ -11,6 +11,16 @@ const PREVIOUS_DEFAULT_CHECKS = [
   'Lighting & color consistency',
   'Background & composition cleanliness',
   'Overall character fidelity',
+  'Skin texture & material realism (pores, fine grain, plastic or waxy finish)',
+  'Hair strand texture, volume & natural grooming',
+  'Forehead tilak / bindi placement and completeness',
+  'Earrings: left-right design, structure, scale & attachment',
+  'Nose pin: presence, placement, scale & natural fit when applicable',
+  'Attire, drape, shawl & pattern continuity from top to bottom',
+  'Crown / headpiece fit and natural attachment to the head',
+  'Bangles, bracelets & rings: count, matching design, scale & fit',
+  'Footwear match, construction & fit on both feet',
+  'Body proportions, anatomy, pose & overall image finish',
 ]
 
 type State = {

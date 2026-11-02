@@ -37,6 +37,7 @@ export type Settings = {
 }
 
 export const DEFAULT_CHECKS = [
+  'Viewpoint, visible coverage & crop-aware QC assessment',
   'Skin texture & material realism (pores, fine grain, plastic or waxy finish)',
   'Hair strand texture, volume & natural grooming',
   'Forehead tilak / bindi placement and completeness',
@@ -46,6 +47,7 @@ export const DEFAULT_CHECKS = [
   'Crown / headpiece fit and natural attachment to the head',
   'Bangles, bracelets & rings: count, matching design, scale & fit',
   'Footwear match, construction & fit on both feet',
+  'Hands, fingers, feet & toes: natural anatomy and clear separation',
   'Body proportions, anatomy, pose & overall image finish',
 ]
 

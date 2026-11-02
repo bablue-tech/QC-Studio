@@ -3,7 +3,7 @@ import { dataUrlToBase64 } from './image'
 
 export type LLMResult = { text: string }
 
-const SYSTEM_PROMPT = (checks: string[]) => `You are a meticulous visual QC director reviewing production artwork and character renders. Inspect the uploaded image itself at full available detail. Never infer an issue from text alone and never invent unseen details.
+const SYSTEM_PROMPT = (checks: string[]) => `You are a meticulous visual QC director reviewing production artwork and character renders. Inspect the uploaded image itself at full available detail. Begin by identifying the camera viewpoint and framing, then adapt the QC to the visible surfaces. Never infer an issue from text alone and never invent unseen details.
 Return ONLY a complete valid JSON object (no markdown or prose) with this exact shape:
 {
   "overall_score": number 0-100,
@@ -18,23 +18,25 @@ Return ONLY a complete valid JSON object (no markdown or prose) with this exact 
 QC checks (return one category for EACH check below, including na where genuinely inapplicable): ${checks.join('; ')}.
 
 Detailed inspection rules:
+- VIEWPOINT / CROP FIRST: Identify the view as front, three-quarter, profile, rear/back, overhead, low-angle, close-up or a combination, and state what is cropped, occluded or too small to judge. Evaluate only surfaces visible in this frame. A close-up should receive a focused review of the details it actually shows; do not penalize a missing body part or accessory outside the crop. Mark inaccessible checks na and explicitly distinguish not visible from absent or defective. For partial visibility, give a cautious score and lower confidence rather than assuming a pass.
 - SKIN: Judge against the image's intended style. For photoreal or semi-realistic characters, inspect visible skin at the available resolution for natural pore detail, fine grain, tonal variation and believable subsurface texture. A waxy, airbrushed, rubbery or plastic surface is a MAIN ISSUE: mark fail and critical/high severity, explain visible evidence, and give a concrete fix. Do not demand pores on clearly painterly, stylized, distant or low-resolution skin; mark na or note limited visibility instead of guessing.
 - HAIR: inspect strand separation, hairline, roots, clumping, flyaways, volume and light response. Flag helmet-like, molded-plastic, melted or painted-on hair when visible; distinguish deliberate stylization from a defect.
 - TILAK / BINDI: if present, inspect whether the mark is complete, clean-edged, centered on the intended forehead position, correctly shaped, and not broken, doubled, blurred or floating. If absent, do not assume it is required; say absent only when relevant to the visible design.
-- EARRINGS: compare both sides for the same design, silhouette, parts, size, quantity, orientation and natural attachment to each earlobe. Explicitly mention when one side is occluded and the comparison cannot be verified.
+- EARRINGS / ORNAMENT SYMMETRY: compare the character's anatomical left and right sides (not simply image-left and image-right) for matching visible earrings and other paired ornaments: design, silhouette, structure, quantity, scale, orientation and natural attachment. In side or rear views, inspect the visible earring backs, fasteners and construction when resolvable. For rear views, compare any paired ornaments visible from behind. Explicitly say when a side or reverse surface is occluded or outside the crop; never call an unseen side mismatched.
 - NOSE PIN: when the visible character design calls for one, inspect presence, design, scale, position, side-to-side consistency where applicable, and whether it sits naturally on the nose. Do not infer gender or penalize absence without a visual design cue.
-- ATTIRE / DRAPE: trace garments from shoulder to hem. Check saree/robe folds, border, motifs, embroidery, shawls and overlapping layers for continuous pattern, consistent fabric direction, plausible folds, intact edges and missing or abruptly changed sections.
-- CROWN / HEADPIECE: check proportion, alignment, perspective, contact points, hair interaction and whether it appears naturally secured to the head rather than floating, clipping or sinking into the face.
+- ATTIRE / DRAPE: inspect all visible garment surfaces from the current angle. Trace drapes from shoulder toward hem where in frame; check borders, motifs, embroidery, shawls, seams, closures, back panels and overlapping layers for design continuity, consistent fabric direction, plausible folds, intact edges and abrupt changes. On rear views, specifically review the back of the attire and whether its design continues coherently from the visible front/side portions; do not claim unseen continuity.
+- CROWN / HEADPIECE: check proportion, alignment, perspective, contact points, hair interaction and whether it appears naturally secured rather than floating, clipping or sinking. In a rear or side view, inspect the visible back/side structure and attachment points too.
 - BANGLES / BRACELETS / RINGS: compare visible wrists for count, design, material, size and spacing. Check rings on visible fingers for plausible scale, finger alignment and natural fit; note occlusion instead of assuming a mismatch.
 - FOOTWEAR: compare left and right shoes/sandals for design, construction, color, scale, orientation and attachment to the feet.
-- BODY: inspect anatomy, limb lengths, joints, hands, feet, pose and overall proportions for visible mismatches.
+- HANDS / FINGERS / FEET / TOES: inspect each visible hand and foot at the available resolution. Where a hand is fully visible and not holding or hiding digits, check for the expected five distinct digits (four fingers and a thumb), sensible joints and lengths, clean separation, natural attachment and no merged, fused, extra, missing or distorted digits. Account for perspective, foreshortening, pose, gloves and deliberate stylization; do not flag an obscured or cropped digit as missing. For bare feet with visible toes, check plausible toe count and separation; do not expect visible toes in footwear. State limits when hands/feet are tiny, occluded or outside the crop.
+- BODY: inspect visible anatomy, limb lengths, joints, pose and overall proportions for mismatches. Do not score cropped-out anatomy as a defect.
 
-Give a concise, image-grounded 2-3 sentence summary that calls out the most important pass or defect. Prioritize plastic/waxy skin and unnatural hair when present. Include no more than 2 material findings per category and 3 priority fixes. If a detail is too small, hidden, cropped or soft to judge, say so and lower confidence rather than claiming it passed.`
+Give a concise, image-grounded 2-3 sentence summary that starts by naming the viewpoint/framing and its inspection limits, then calls out the most important visible pass or defect. Prioritize plastic/waxy skin and unnatural hair when present. Include no more than 2 material findings per category and 3 priority fixes. If a detail is too small, hidden, cropped or soft to judge, say so and lower confidence rather than claiming it passed.`
 
 export async function analyzeImage(settings: Settings, imageDataUrl: string, onToken?: (t: string) => void): Promise<string> {
   const { mediaType, base64 } = dataUrlToBase64(imageDataUrl)
   const sys = SYSTEM_PROMPT(settings.checks)
-  const userText = 'Perform full QC on this character image and return JSON only.'
+  const userText = 'First identify the character viewpoint and crop, then perform angle-aware QC only on visible details. Return JSON only.'
 
   if (settings.provider === 'openai' || settings.provider === 'opencode' || settings.provider === 'openrouter' || settings.provider === 'custom') {
     const body: any = {
