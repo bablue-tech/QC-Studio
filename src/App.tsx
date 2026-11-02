@@ -131,12 +131,12 @@ export default function App() {
         </main>
 
         {/* ── Footer ── */}
-        <footer className="app-footer" aria-label="Developed and designed by Sai Charan Bablue. Catch the craft. Flag the flaw.">
+        <footer className="app-footer" aria-label="Precision in every detail. Confidence in every review. Developed and designed by Sai Charan Bablue.">
           <div className="marquee-track">
             <div className="marquee-content" aria-hidden="true">
-              <span className="marquee-credit">Developed and designed by <strong>SAI CHARAN BABLUE</strong></span>
+              <span className="marquee-tagline">Precision in every detail. Confidence in every review.</span>
               <span className="marquee-star">✦</span>
-              <span className="marquee-tagline">Catch the craft. Flag the flaw.</span>
+              <span className="marquee-credit">Developed and designed by <strong>SAI CHARAN BABLUE</strong></span>
             </div>
           </div>
         </footer>
