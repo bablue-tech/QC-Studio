@@ -917,3 +917,39 @@ body { background: var(--bg-void); }
   .visual-category summary { grid-template-columns: 24px minmax(0, 1fr) 45px 18px; gap: 8px; padding-inline: 10px; }.category-meter, .visual-status { display: none; }.category-main strong { font-size: 10px; }.category-detail { padding-left: 42px; padding-right: 10px; }
   .category-section-head { align-items: flex-start; flex-direction: column; }.scan-stamp { align-self: flex-start; }
 }
+
+/* Ambient AI graph. The canvas is decorative and never captures pointer input. */
+.bg-layer { display: block; background: #100d0b; }
+.bg-layer::before {
+  background:
+    radial-gradient(ellipse 70% 55% at 8% 12%, rgba(242,118,80,.095), transparent 72%),
+    radial-gradient(ellipse 58% 64% at 94% 78%, rgba(217,223,131,.055), transparent 74%),
+    linear-gradient(145deg, #100d0b 0%, #17110e 52%, #100d0b 100%);
+}
+.node-grid, .node-dots, .orb, .scanlines { display: none; }
+.network-glow { position: absolute; width: 36vw; height: 36vw; min-width: 300px; min-height: 300px; border-radius: 50%; filter: blur(85px); opacity: .1; transition: opacity .6s ease, transform 1.4s ease; }
+.network-glow-one { top: 8%; left: 7%; background: #f27650; }
+.network-glow-two { right: 5%; bottom: -6%; background: #d9df83; opacity: .055; }
+.network-canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .53; overflow: visible; }
+.network-links { fill: none; stroke: url(#linkWarm); stroke-width: 1; stroke-dasharray: 3 5; opacity: .38; }
+.network-nodes circle { fill: #ff9872; opacity: .28; filter: drop-shadow(0 0 5px rgba(242,118,80,.7)); animation: nodeBreathe 4.8s ease-in-out infinite; }
+.network-nodes circle.is-bright { fill: #d9df83; opacity: .65; filter: drop-shadow(0 0 7px rgba(217,223,131,.6)); animation-duration: 3.4s; }
+.network-packets { opacity: .5; filter: drop-shadow(0 0 7px rgba(242,118,80,.75)); }
+.network-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse 92% 90% at 50% 45%, transparent 28%, rgba(16,13,11,.34) 100%); }
+.bg-layer.is-analyzing .network-glow { opacity: .22; transform: scale(1.12); }
+.bg-layer.is-analyzing .network-links { stroke-dasharray: 2 4; opacity: .66; animation: linkFlow 3.2s linear infinite; }
+.bg-layer.is-analyzing .network-nodes circle { animation-duration: 1.7s; opacity: .56; }
+.bg-layer.is-analyzing .network-packets { opacity: .95; }
+@keyframes nodeBreathe { 0%, 100% { opacity: .18; transform: scale(.8); } 50% { opacity: .68; transform: scale(1.35); } }
+@keyframes linkFlow { to { stroke-dashoffset: -28; } }
+.sys-badge { transition: color .25s, border-color .25s, background .25s; }
+.sys-badge .pulse-dot { transition: background .25s, box-shadow .25s; }
+.sys-badge.analyzing { color: var(--azure); border-color: var(--border-soft); }
+.sys-badge.analyzing .pulse-dot { background: var(--azure); box-shadow: 0 0 10px var(--electric-glow); }
+@media (max-width: 760px) {
+  .network-canvas { opacity: .38; }
+  .network-glow { filter: blur(64px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .network-nodes circle, .network-links, .network-packets, .network-glow { animation: none !important; transition: none !important; }
+}
