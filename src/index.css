@@ -741,6 +741,8 @@ body { background: var(--bg-void); }
 .drop-zone { padding: clamp(30px, 5vw, 54px) 20px; }
 .finding-card { background: rgba(255,255,255,.018); }
 .setup-section { padding: clamp(18px, 3vw, 26px); }
+.text-response-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.text-response-content { margin: 0; color: var(--text-base); font: 13px/1.75 var(--font-body); white-space: pre-wrap; overflow-wrap: anywhere; }
 code { color: var(--azure); font-family: var(--font-body); font-size: .95em; }
 button, input, select { font: inherit; }
 button:focus-visible, input:focus-visible, select:focus-visible, [role="button"]:focus-visible { outline: 2px solid var(--azure); outline-offset: 3px; }

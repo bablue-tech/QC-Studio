@@ -105,6 +105,29 @@ export function ReportPanel() {
   const copy = async () => { await navigator.clipboard.writeText(JSON.stringify(report, null, 2)) }
 
   const score = report.overall_score ?? 0
+  const textResponse = [
+    `QC REVIEW — ${imageName || 'Image'}`,
+    `Overall score: ${score}/100`,
+    '',
+    'SUMMARY',
+    report.summary || 'No summary was provided.',
+    '',
+    'CATEGORY RESULTS',
+    ...(report.categories || []).flatMap((category: any) => [
+      `${category.name} — ${(category.status || 'na').toUpperCase()} (${category.score ?? '—'}/100)`,
+      ...(category.findings?.length
+        ? category.findings.flatMap((finding: any) => [
+            `  • [${finding.severity || 'note'}] ${finding.issue || 'Finding'}`,
+            ...(finding.location ? [`    Location: ${finding.location}`] : []),
+            ...(finding.fix ? [`    Suggested fix: ${finding.fix}`] : []),
+          ])
+        : ['  No material issues detected.']),
+    ]),
+    ...(report.priority_fixes?.length ? ['', 'PRIORITY FIXES', ...report.priority_fixes.map((fix: string, i: number) => `${i + 1}. ${fix}`)] : []),
+    ...(report.extra_observations?.length ? ['', 'ADDITIONAL OBSERVATIONS', ...report.extra_observations.map((note: string) => `• ${note}`)] : []),
+  ].join('\n')
+
+  const copyTextResponse = async () => { await navigator.clipboard.writeText(textResponse) }
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 28px' }}>
@@ -132,6 +155,9 @@ export function ReportPanel() {
 
           {/* Export Actions */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button className="btn-ghost" onClick={copyTextResponse} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Copy size={11} /> Copy text response
+            </button>
             <button className="btn-ghost" onClick={exportJson} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <Download size={11} /> Export JSON
             </button>
@@ -156,6 +182,16 @@ export function ReportPanel() {
         <p style={{ fontSize: 14, color: 'var(--text-base)', lineHeight: 1.75, margin: 0 }}>
           {report.summary}
         </p>
+      </div>
+
+      <div className="card text-response-card" style={{ padding: '18px 22px', marginBottom: 24 }}>
+        <div className="text-response-heading">
+          <div className="section-label" style={{ margin: 0 }}>Plain-text response</div>
+          <button className="btn-ghost" onClick={copyTextResponse} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Copy size={11} /> Copy text
+          </button>
+        </div>
+        <pre className="text-response-content">{textResponse}</pre>
       </div>
 
       {/* ── Categories ── */}
