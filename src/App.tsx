@@ -131,9 +131,17 @@ export default function App() {
         </main>
 
         {/* ── Footer ── */}
-        <footer className="app-footer">
-          <span>BRANDGUARD <span className="footer-separator">/</span> QUALITY REVIEW WORKSPACE</span>
-          <span>Private by design <span className="footer-separator">·</span> Built for careful review</span>
+        <footer className="app-footer" aria-label="Developed and designed by Sai Charan Bablue">
+          <div className="marquee-track">
+            {[0, 1].map((copy) => (
+              <div className="marquee-content" aria-hidden="true" key={copy}>
+                <span className="marquee-credit">Developed and designed by <strong>SAI CHARAN BABLUE</strong></span>
+                <span className="marquee-star">✦</span>
+                <span className="marquee-credit">Developed and designed by <strong>SAI CHARAN BABLUE</strong></span>
+                <span className="marquee-star">✦</span>
+              </div>
+            ))}
+          </div>
         </footer>
       </div>
     </>

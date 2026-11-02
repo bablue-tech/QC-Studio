@@ -953,3 +953,20 @@ body { background: var(--bg-void); }
 @media (prefers-reduced-motion: reduce) {
   .network-nodes circle, .network-links, .network-packets, .network-glow { animation: none !important; transition: none !important; }
 }
+
+/* Creator credit marquee */
+.app-footer { justify-content: flex-start; padding: 0; }
+.app-footer::before { background: linear-gradient(to right, rgba(16,13,11,.98), transparent); }
+.app-footer::after { background: linear-gradient(to left, rgba(16,13,11,.98), transparent); }
+.app-footer .marquee-track { align-items: center; min-height: 100%; }
+.app-footer .marquee-content { gap: 16px; padding: 0 28px; color: var(--text-soft); font: 500 9px var(--font-body); letter-spacing: 1.35px; }
+.marquee-credit { white-space: nowrap; }
+.marquee-credit strong { color: var(--azure); font-weight: 700; }
+.marquee-star { color: var(--neon); font-size: 10px; }
+@media (max-width: 760px) {
+  .app-footer .marquee-content { gap: 12px; padding-inline: 22px; font-size: 8px; letter-spacing: .9px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-footer .marquee-track { width: 100%; justify-content: center; animation: none !important; transform: none !important; }
+  .app-footer .marquee-content:nth-child(2) { display: none; }
+}
