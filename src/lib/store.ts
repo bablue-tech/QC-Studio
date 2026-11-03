@@ -2,7 +2,12 @@ import { create } from 'zustand'
 import { PROVIDER_DEFAULTS, DEFAULT_CHECKS } from './types'
 import type { Settings, RunRecord, ReferenceFrame } from './types'
 
-const CHECK_MATRIX_VERSION = '3'
+const CHECK_MATRIX_VERSION = '4'
+const NEW_WEARABLE_CHECKS = [
+  'Waist belt / girdle fit, attachment & design continuity',
+  'Janeu (sacred thread) route, alignment & attachment',
+]
+const PREVIOUS_MATRIX_CHECKS = DEFAULT_CHECKS.filter((check) => !NEW_WEARABLE_CHECKS.includes(check))
 const LEGACY_DEFAULT_CHECKS = [
   'Symmetry & proportions (left vs right ornaments)',
   'Jewellery design consistency on both sides',
@@ -73,7 +78,12 @@ const loadSettings = (): Settings => {
       parsed.maxTokens = Number.isFinite(savedMaxTokens) && savedMaxTokens >= 4000 ? savedMaxTokens : 4000
       if (Array.isArray(parsed.checks)) {
         const matrixVersion = localStorage.getItem('qc_checks_version') || '0'
-        if (matrixVersion !== CHECK_MATRIX_VERSION) {
+        if (matrixVersion === '3') {
+          const selectedPriorChecks = parsed.checks.filter((check: string) => PREVIOUS_MATRIX_CHECKS.includes(check))
+          const customChecks = parsed.checks.filter((check: string) => !LEGACY_DEFAULT_CHECKS.includes(check) && !DEFAULT_CHECKS.includes(check))
+          parsed.checks = [...selectedPriorChecks, ...NEW_WEARABLE_CHECKS, ...customChecks]
+          try { localStorage.setItem('qc_checks_version', CHECK_MATRIX_VERSION) } catch {}
+        } else if (matrixVersion !== CHECK_MATRIX_VERSION) {
           const customChecks = parsed.checks.filter((check: string) => !LEGACY_DEFAULT_CHECKS.includes(check) && !DEFAULT_CHECKS.includes(check))
           parsed.checks = [...DEFAULT_CHECKS, ...customChecks]
           try { localStorage.setItem('qc_checks_version', CHECK_MATRIX_VERSION) } catch {}

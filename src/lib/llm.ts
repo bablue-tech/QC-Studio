@@ -45,6 +45,12 @@ Mandatory textile trace (never replace this with a generic statement such as "th
 - If reviewer markup (red circles, arrows, strokes, or highlights) appears on the target, treat it as annotation, not artwork. Inspect the indicated area first; ignore the markup itself as a defect. If it obscures the textile evidence, lower confidence and state that limit.
 Populate textile_path_coverage and continuity_traces only in the attire/textile category; omit them or use an empty trace list for unrelated categories.
 
+Waist belt/girdle and janeu alignment:
+- Inspect a visible or design-required waist belt separately from the sari/dhoti's own printed border. Check anatomical height, front centering, perspective, stable width, closure/end joins, natural contact, attachment around the visible waist, floating/clipping/penetration/twist, and any abrupt ornament-design/count change. Account for the belt's path where the drape or hands occlude it.
+- If a belt is not visible or not part of the character design, report that limit/NA; do not invent one.
+- If a janeu/sacred thread is visible or required by the supplied design, trace its visible route across shoulder, chest, torso, and waist. Check orientation against the approved model sheet/reference, alignment to the body, strand continuity, natural lay/contact, plausible occlusion, and its crossing with belt/necklaces. Flag floating, clipping, broken/doubled strands or implausible intersections with location and correction.
+- Do not infer that every character must wear a janeu or impose a specific ritual orientation without a design reference. If it is absent and not specified, report not applicable; if cropped/occluded, say so.
+
 Production severity:
 - critical: shot-breaking or unusable defect (identity substitution, major anatomy/prop failure, severe costume discontinuity, or prominent impossible structure). Decision must be hold.
 - high: clear, prominent issue requiring correction before final; decision must be at least review.
@@ -65,7 +71,7 @@ Coverage and interpretation rules:
 export async function analyzeImage(settings: Settings, reviewImages: ReviewImageInput[], onToken?: (t: string) => void): Promise<string> {
   const sys = SYSTEM_PROMPT(settings.checks)
   const hasReferences = reviewImages.some((image) => image.role === 'reference')
-  const userText = `First identify the target shot's viewpoint, shot type, and crop. The primary target frame is labeled. Garment crops are magnified regions from that same target, not another shot. Trace each visible textile border path from start to end and compare motif/border construction at each waist, overlap, seam, and fold transition; return the required continuity_traces instead of a generic continuity claim. If colored review markup is present, treat it as an attention guide and not as artwork. ${hasReferences ? 'Images labeled as references are approved design/continuity references, not part of the target frame; compare stable identity, costume, prop and palette details while allowing pose, camera and lighting changes.' : 'No reference frames were supplied; do not claim shot-to-shot continuity was checked.'} Perform all applicable production QC checks on visible evidence and return JSON only.`
+const userText = `First identify the target shot's viewpoint, shot type, and crop. The primary target frame is labeled. Garment crops are magnified regions from that same target, not another shot. Trace each visible textile border path from start to end and compare motif/border construction at each waist, overlap, seam, and fold transition; return the required continuity_traces instead of a generic continuity claim. Separately inspect waist-belt attachment and the janeu route/alignment where visible or specified, especially where they cross or pass under the drape. If colored review markup is present, treat it as an attention guide and not as artwork. ${hasReferences ? 'Images labeled as references are approved design/continuity references, not part of the target frame; compare stable identity, costume, prop and palette details while allowing pose, camera and lighting changes.' : 'No reference frames were supplied; do not claim shot-to-shot continuity was checked.'} Perform all applicable production QC checks on visible evidence and return JSON only.`
 
   if (settings.provider === 'openai' || settings.provider === 'opencode' || settings.provider === 'openrouter' || settings.provider === 'custom') {
     const body: any = {
@@ -234,6 +240,7 @@ export function parseReport(text: string, enabledChecks: string[] = [], hasRefer
   const finalize = (report: any) => {
     report = ensureSummary(report)
     ensureGarmentAssessment(report, enabledChecks)
+    ensureWearableAlignment(report, enabledChecks)
     ensureReferenceAssessment(report, enabledChecks, hasReferences)
     report.decision = normalizeDecision(report)
     report.production_context = {
@@ -364,6 +371,71 @@ function ensureGarmentAssessment(report: any, enabledChecks: string[]): any {
     })
   }
   return report
+}
+
+function ensureWearableAlignment(report: any, enabledChecks: string[]): void {
+  const requiredChecks = [
+    {
+      enabled: /waist belt|girdle/i,
+      category: /waist belt|girdle/i,
+      label: 'waist belt/girdle',
+      subject: /belt|girdle|waistband|kamarband/i,
+      inspection: /align|center|attach|fit|height|closure|float|clip|gap|continu|contact|occlud|visible|perspective/i,
+      correction: 'Inspect the belt height, centerline, fit, closure, and attachment across visible waist sections, including where the drape overlaps it.',
+    },
+    {
+      enabled: /janeu|sacred thread/i,
+      category: /janeu|sacred thread/i,
+      label: 'janeu/sacred thread',
+      subject: /janeu|sacred thread|yajnopavita|yajñopavīta|upavita/i,
+      inspection: /align|route|shoulder|chest|torso|waist|attach|float|clip|occlud|cross|strand|visible|reference|not present|not visible|not specified|not applicable|absent/i,
+      correction: 'Trace the visible thread route against the approved character design and check its alignment, continuity, and intersections with the belt or jewelry.',
+    },
+  ]
+
+  for (const check of requiredChecks) {
+    if (!enabledChecks.some((name) => check.enabled.test(name))) continue
+    if (!Array.isArray(report.categories)) report.categories = []
+    let category = report.categories.find((item: any) => check.category.test(String(item?.name || '')))
+    if (!category) {
+      category = { domain: 'Costume & wearable alignment', name: enabledChecks.find((name) => check.enabled.test(name)), status: 'warn', score: 45, assessment: '', findings: [] }
+      report.categories.push(category)
+    }
+    if (!Array.isArray(category.findings)) category.findings = []
+
+    const assessment = typeof category.assessment === 'string' ? category.assessment : ''
+    const findingEvidence = category.findings.map((finding: any) => `${finding?.issue || ''} ${finding?.evidence || ''} ${finding?.location || ''}`).join(' ')
+    const inspectionText = `${assessment} ${findingEvidence}`
+    const hasSpecificSubject = check.subject.test(inspectionText) || category.status === 'na'
+    const explainsInspection = check.inspection.test(inspectionText)
+    const saysUnavailable = /not visible|not assessable|unseen|outside (the )?frame|hidden|cropped|occluded|cannot assess|unverifiable|not specified|not applicable|not present|absent|not required|not called for|not part of (the )?design/i.test(inspectionText)
+    const adequate = category.status === 'na'
+      ? hasSpecificSubject && saysUnavailable
+      : hasSpecificSubject && explainsInspection && !(category.status === 'pass' && (saysUnavailable || category.findings.length > 0))
+    if (adequate) continue
+
+    category.assessment = `${assessment ? `${assessment} ` : ''}${check.label} inspection is not documented clearly enough to confirm alignment or explain why it is not applicable. ${check.correction}`.trim()
+    if (category.status !== 'fail') category.status = 'warn'
+    category.score = Math.min(Number.isFinite(Number(category.score)) ? Number(category.score) : 100, 55)
+    if (!category.findings.length) category.findings.push({
+      issue: `The response did not document the ${check.label} fit/alignment check.`,
+      evidence: 'No location-specific inspection note was returned for this required QC parameter.',
+      location: check.label === 'waist belt/girdle' ? 'Visible waist and drape overlap' : 'Visible shoulder-to-torso thread path',
+      severity: 'medium',
+      confidence: 1,
+      fix: check.correction,
+    })
+    const overallScore = Number(report.overall_score)
+    report.overall_score = Math.min(Number.isFinite(overallScore) ? overallScore : 100, 75)
+    const summary = String(report.summary || '')
+    const summaryMentionsCheck = check.label === 'waist belt/girdle' ? /belt|girdle/i.test(summary) : /janeu|sacred thread/i.test(summary)
+    if (!summaryMentionsCheck) report.summary = `${check.label} alignment is unverified because the response did not document the visible fit/route check. ${summary}`.trim()
+    if (!Array.isArray(report.priority_fixes)) report.priority_fixes = []
+    if (!report.priority_fixes.some((fix: string) => check.label === 'waist belt/girdle' ? /belt|girdle/i.test(fix) : /janeu|sacred thread/i.test(fix))) {
+      report.priority_fixes.unshift(check.correction)
+      report.priority_fixes = report.priority_fixes.slice(0, 5)
+    }
+  }
 }
 
 function ensureReferenceAssessment(report: any, enabledChecks: string[], hasReferences: boolean): void {
