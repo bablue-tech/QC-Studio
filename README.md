@@ -3,6 +3,7 @@
 FrameProof is a visual quality-control workspace for reviewing character and product imagery. Upload an image, run a structured vision review, and export or revisit the resulting report.
 
 For a non-technical flowsheet and backend overview, see [docs/architecture-overview.md](docs/architecture-overview.md).
+For the step-by-step process, technology purposes, and source-code percentage breakdown, see [docs/process-and-technology-guide.md](docs/process-and-technology-guide.md).
 
 ## Run locally
 
