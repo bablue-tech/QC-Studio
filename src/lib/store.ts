@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { PROVIDER_DEFAULTS, DEFAULT_CHECKS } from './types'
 import type { Settings, RunRecord } from './types'
 
-const PREVIOUS_DEFAULT_CHECKS = [
+const LEGACY_DEFAULT_CHECKS = [
   'Symmetry & proportions (left vs right ornaments)',
   'Jewellery design consistency on both sides',
   'Attire / costume continuity top-to-bottom',
@@ -16,12 +16,13 @@ const PREVIOUS_DEFAULT_CHECKS = [
   'Forehead tilak / bindi placement and completeness',
   'Earrings: left-right design, structure, scale & attachment',
   'Nose pin: presence, placement, scale & natural fit when applicable',
-  'Attire, drape, shawl & pattern continuity from top to bottom',
   'Crown / headpiece fit and natural attachment to the head',
   'Bangles, bracelets & rings: count, matching design, scale & fit',
   'Footwear match, construction & fit on both feet',
   'Body proportions, anatomy, pose & overall image finish',
 ]
+const PREVIOUS_ATTIRE_CHECK = 'Attire, drape, shawl & pattern continuity from top to bottom'
+const CURRENT_ATTIRE_CHECK = 'Saree, drape & shawl design continuity (borders, motifs, pleats and transitions)'
 
 type State = {
   settings: Settings
@@ -62,9 +63,15 @@ const loadSettings = (): Settings => {
       parsed.model = PROVIDER_DEFAULTS.gemini.model
       const savedMaxTokens = Number(parsed.maxTokens)
       parsed.maxTokens = Number.isFinite(savedMaxTokens) && savedMaxTokens >= 4000 ? savedMaxTokens : 4000
-      if (Array.isArray(parsed.checks) && parsed.checks.some((check: string) => PREVIOUS_DEFAULT_CHECKS.includes(check))) {
-        const customChecks = parsed.checks.filter((check: string) => !PREVIOUS_DEFAULT_CHECKS.includes(check))
-        parsed.checks = [...DEFAULT_CHECKS, ...customChecks]
+      if (Array.isArray(parsed.checks)) {
+        const hasLegacyMatrix = parsed.checks.some((check: string) => LEGACY_DEFAULT_CHECKS.includes(check))
+        const hasCurrentDefault = parsed.checks.some((check: string) => DEFAULT_CHECKS.includes(check))
+        if (hasLegacyMatrix && !hasCurrentDefault) {
+          const customChecks = parsed.checks.filter((check: string) => !LEGACY_DEFAULT_CHECKS.includes(check))
+          parsed.checks = [...DEFAULT_CHECKS, ...customChecks]
+        } else {
+          parsed.checks = parsed.checks.map((check: string) => check === PREVIOUS_ATTIRE_CHECK ? CURRENT_ATTIRE_CHECK : check)
+        }
       }
       try { localStorage.setItem('qc_settings', JSON.stringify(parsed)) } catch {}
       return parsed

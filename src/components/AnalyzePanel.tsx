@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../lib/store'
-import { resizeImage } from '../lib/image'
+import { createGarmentDetailImage, resizeImage } from '../lib/image'
 import { analyzeImage, parseReport } from '../lib/llm'
 import { PROVIDER_DEFAULTS } from '../lib/types'
 import { Uploader } from './Uploader'
@@ -10,7 +10,7 @@ const PIPELINE_NODES = [
   {
     icon: '⬡',
     label: 'Preprocess',
-    desc: 'Preserve fine texture up to 2048px',
+    desc: 'Full frame + fabric detail when available',
     color: 'rgba(242,118,80,0.15)',
     border: 'rgba(242,118,80,0.3)',
   },
@@ -61,19 +61,22 @@ export function AnalyzePanel() {
     if (settings.provider !== 'gemini' || settings.endpoint !== PROVIDER_DEFAULTS.gemini.endpoint || settings.model !== PROVIDER_DEFAULTS.gemini.model) {
       setSettings({ provider: 'gemini', endpoint: PROVIDER_DEFAULTS.gemini.endpoint, model: PROVIDER_DEFAULTS.gemini.model })
     }
-    setError(''); setRaw(''); setAnalyzing(true, 'Preprocessing image…')
+    const inspectGarments = settings.checks.some((check) => /attire|drape|shawl|saree|garment|fabric|pattern/i.test(check))
+    setError(''); setRaw(''); setAnalyzing(true, inspectGarments ? 'Preparing full frame and fabric detail…' : 'Preprocessing image…')
     try {
       const { dataUrl } = await resizeImage(image, 2048, 0.94)
-      setAnalyzing(true, 'Running neural vision analysis…')
+      const garmentDetail = inspectGarments ? createGarmentDetailImage(image) : null
+      const reviewImages = garmentDetail ? [dataUrl, garmentDetail] : [dataUrl]
+      setAnalyzing(true, garmentDetail ? 'Tracing fabric patterns across full frame and detail…' : 'Running neural vision analysis…')
       const text = await analyzeImage({
         ...settings,
         provider: 'gemini',
         apiKey: '',
         endpoint: PROVIDER_DEFAULTS.gemini.endpoint,
         model: PROVIDER_DEFAULTS.gemini.model,
-      }, dataUrl, (t) => setRaw(t))
+      }, reviewImages, (t) => setRaw(t))
       setAnalyzing(true, 'Parsing QC report…')
-      const report = parseReport(text)
+      const report = parseReport(text, settings.checks)
       report.raw = text
       setReport(report)
       addHistory({

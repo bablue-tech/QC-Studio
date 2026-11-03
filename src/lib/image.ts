@@ -22,6 +22,26 @@ export async function resizeImage(img: HTMLImageElement, maxSide = 1280, quality
   return { dataUrl, width: w, height: h }
 }
 
+/** Creates a secondary, full-width crop to give vision models more attention on visible garment transitions. */
+export function createGarmentDetailImage(img: HTMLImageElement, maxSide = 2048, quality = 0.92): string | null {
+  const width = img.naturalWidth || img.width
+  const height = img.naturalHeight || img.height
+  if (height < 1200 || height < width * 1.12) return null
+
+  const top = Math.round(height * 0.14)
+  const cropHeight = Math.round(height * 0.83)
+  const scale = Math.min(1, maxSide / Math.max(width, cropHeight))
+  const cropWidth = Math.max(1, Math.round(width * scale))
+  const outputHeight = Math.max(1, Math.round(cropHeight * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = cropWidth
+  canvas.height = outputHeight
+  const context = canvas.getContext('2d')
+  if (!context) return null
+  context.drawImage(img, 0, top, width, cropHeight, 0, 0, cropWidth, outputHeight)
+  return canvas.toDataURL('image/jpeg', quality)
+}
+
 export function dataUrlToBase64(dataUrl: string): { mediaType: string; base64: string } {
   const m = dataUrl.match(/^data:(.*?);base64,(.*)$/)
   if (!m) throw new Error('bad data url')

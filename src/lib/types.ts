@@ -4,6 +4,7 @@ export type QCCategory = {
   name: string
   status: 'pass' | 'warn' | 'fail' | 'na'
   score: number
+  assessment?: string
   findings: { issue: string; severity: 'low' | 'medium' | 'high' | 'critical'; location?: string; fix: string }[]
 }
 
@@ -43,7 +44,7 @@ export const DEFAULT_CHECKS = [
   'Forehead tilak / bindi placement and completeness',
   'Earrings: left-right design, structure, scale & attachment',
   'Nose pin: presence, placement, scale & natural fit when applicable',
-  'Attire, drape, shawl & pattern continuity from top to bottom',
+  'Saree, drape & shawl design continuity (borders, motifs, pleats and transitions)',
   'Crown / headpiece fit and natural attachment to the head',
   'Bangles, bracelets & rings: count, matching design, scale & fit',
   'Footwear match, construction & fit on both feet',

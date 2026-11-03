@@ -92,6 +92,7 @@ export function ReportPanel() {
     let md = `# QC Review — ${imageName || 'Image'}\n\nScore: ${score}/100\n\n${report.summary || ''}\n\n`
     categories.forEach((category: any) => {
       md += `## ${category.name} — ${(category.status || 'na').toUpperCase()} (${category.score ?? 0})\n`
+      if (category.assessment) md += `Assessment: ${category.assessment}\n`
       ;(category.findings || []).forEach((finding: any) => {
         md += `- [${finding.severity || 'note'}] ${finding.issue || ''}${finding.location ? ` (${finding.location})` : ''}\n  - Fix: ${finding.fix || 'Review manually'}\n`
       })
@@ -174,6 +175,7 @@ export function ReportPanel() {
                   <ArrowDownRight className="category-chevron" size={16} />
                 </summary>
                 <div className="category-detail">
+                  {category.assessment && <p className="category-assessment"><span>INSPECTION NOTE</span>{category.assessment}</p>}
                   {findings.length ? findings.map((finding: any, j: number) => (
                     <article className={`visual-finding ${finding.severity || 'low'}`} key={j}>
                       <div className="finding-topline"><span className={`finding-severity ${finding.severity || 'low'}`}>{(finding.severity || 'note').toUpperCase()}</span>{finding.location && <span className="finding-location">{finding.location}</span>}</div>
