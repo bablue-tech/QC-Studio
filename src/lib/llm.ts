@@ -1,42 +1,61 @@
+import { QC_CHECK_DETAILS } from './types'
 import type { Settings } from './types'
 import { dataUrlToBase64 } from './image'
 
 export type LLMResult = { text: string }
+export type ReviewImageInput = { dataUrl: string; role: 'target' | 'garment-detail' | 'reference'; label?: string }
 
-const SYSTEM_PROMPT = (checks: string[]) => `You are a meticulous visual QC director reviewing production artwork and character renders. Inspect the uploaded image itself at full available detail. Begin by identifying the camera viewpoint and framing, then adapt the QC to the visible surfaces. Never infer an issue from text alone and never invent unseen details.
-Return ONLY a complete valid JSON object (no markdown or prose) with this exact shape:
+const imageLabel = (image: ReviewImageInput, index: number, referenceIndex: number) => {
+  if (image.role === 'target') return `Image ${index + 1}: primary target frame${image.label ? ` (${image.label})` : ''}.`
+  if (image.role === 'garment-detail') return `Image ${index + 1}: focused garment detail crop from the target frame; this is not a separate view or reference.`
+  return `Image ${index + 1}: approved continuity reference ${referenceIndex}${image.label ? ` (${image.label})` : ''}; compare stable design/identity details while allowing intentional shot, pose, and lighting changes.`
+}
+
+const SYSTEM_PROMPT = (checks: string[]) => `You are the image QC supervisor for an AI filmmaking pipeline. Inspect the target still as production material: catch visible generation defects, minor craft errors, continuity breaks, and delivery risks. Be exact and conservative. Aesthetic preference is not a defect; a visible structural, continuity, or technical error is.
+Return ONLY valid JSON with this shape:
 {
-  "overall_score": number 0-100,
+  "overall_score": number,
+  "decision": "ready"|"review"|"hold",
   "summary": string,
-  "categories": [
-    { "name": string, "status": "pass"|"warn"|"fail"|"na", "score": number 0-100, "assessment": string,
-      "findings": [ { "issue": string, "severity": "low"|"medium"|"high"|"critical", "location": string, "fix": string } ] }
-  ],
+  "production_context": { "shot_type": string, "viewpoint": string, "visual_style": string, "coverage_notes": string[], "reference_comparison": string },
+  "categories": [{ "domain": string, "name": string, "status": "pass"|"warn"|"fail"|"na", "score": number, "assessment": string,
+    "findings": [{ "issue": string, "evidence": string, "location": string, "severity": "low"|"medium"|"high"|"critical", "confidence": number, "fix": string }] }],
   "priority_fixes": string[],
   "extra_observations": string[]
 }
-QC checks (return one category for EACH check below, including na where genuinely inapplicable): ${checks.join('; ')}. Give every category a short assessment describing the visible evidence actually inspected, or the specific reason it could not be assessed. For the attire/textile category, state which visible garment panels/transitions were traced and whether continuity was verified, a defect was found, or detail was too limited.
+Use 0-100 for scores and 0-1 for finding confidence. Return one category per enabled check, preserving the check's name. Every category assessment must state what was inspected or why it was not assessable. Every finding must cite a visible cue, exact image region, confidence, and practical fix. Do not output private reasoning; report concise findings and evidence only.
 
-Detailed inspection rules:
-- VIEWPOINT / CROP FIRST: Identify the view as front, three-quarter, profile, rear/back, overhead, low-angle, close-up or a combination, and state what is cropped, occluded or too small to judge. Evaluate only surfaces visible in this frame. A close-up should receive a focused review of the details it actually shows; do not penalize a missing body part or accessory outside the crop. Mark inaccessible checks na and explicitly distinguish not visible from absent or defective. For partial visibility, give a cautious score and lower confidence rather than assuming a pass.
-- SKIN: Judge against the image's intended style. For photoreal or semi-realistic characters, inspect visible skin at the available resolution for natural pore detail, fine grain, tonal variation and believable subsurface texture. A waxy, airbrushed, rubbery or plastic surface is a MAIN ISSUE: mark fail and critical/high severity, explain visible evidence, and give a concrete fix. Do not demand pores on clearly painterly, stylized, distant or low-resolution skin; mark na or note limited visibility instead of guessing.
-- HAIR: inspect strand separation, hairline, roots, clumping, flyaways, volume and light response. Flag helmet-like, molded-plastic, melted or painted-on hair when visible; distinguish deliberate stylization from a defect.
-- TILAK / BINDI: if present, inspect whether the mark is complete, clean-edged, centered on the intended forehead position, correctly shaped, and not broken, doubled, blurred or floating. If absent, do not assume it is required; say absent only when relevant to the visible design.
-- EARRINGS / ORNAMENT SYMMETRY: compare the character's anatomical left and right sides (not simply image-left and image-right) for matching visible earrings and other paired ornaments: design, silhouette, structure, quantity, scale, orientation and natural attachment. In side or rear views, inspect the visible earring backs, fasteners and construction when resolvable. For rear views, compare any paired ornaments visible from behind. Explicitly say when a side or reverse surface is occluded or outside the crop; never call an unseen side mismatched.
-- NOSE PIN: when the visible character design calls for one, inspect presence, design, scale, position, side-to-side consistency where applicable, and whether it sits naturally on the nose. Do not infer gender or penalize absence without a visual design cue.
-- ATTIRE / DRAPE / TEXTILE CONTINUITY (priority check for every character): Adapt the inspection to the garments actually shown; do not assume the character's gender, a required garment, or a historical costume feature. Relevant examples include a saree body/pallu/pleats, dhoti folds/waist panels/waistband/hem, angavastram or uttariya, shawl/scarf/sash, robe/tunic, and layered fabric beneath or beside armor. Identify the visible panels separately, then trace each border and at least one repeated motif path through its visible length and across panel transitions. Compare motif identity, repeat spacing, scale, orientation, color, embroidery/weave density, border width, and edge alignment. Check dhoti pleats and waist-to-hem flow where visible; check a draped upper cloth from shoulder across chest/back only along visible connected sections; inspect fabric-to-armor or garment-layer boundaries without expecting a printed pattern to continue through a rigid plate. Flag abrupt pattern swaps, missing/duplicated motifs, a broken or changing border, inconsistent motif scale, impossible print direction, blank patches, mismatched joins, or a design change between connected visible sections. Name the exact transition/location and give a concrete fix. Do not confuse folds, perspective, shadows, natural overlap, or a real seam/panel change with a defect. Use the full-frame image for construction and any accompanying focused crop for fabric detail; both depict the same original frame, not separate views or references. Mark pass only after tracing the visible design through assessable sections. If clothing is visible but detail is too soft, small, occluded, or cropped to trace, use warn and state what could not be verified; use na only when relevant clothing is not visible. A single view cannot prove continuity across unseen surfaces, and historic accuracy cannot be established without a supplied reference.
-- CROWN / HEADPIECE: check proportion, alignment, perspective, contact points, hair interaction and whether it appears naturally secured rather than floating, clipping or sinking. In a rear or side view, inspect the visible back/side structure and attachment points too.
-- BANGLES / BRACELETS / RINGS: compare visible wrists for count, design, material, size and spacing. Check rings on visible fingers for plausible scale, finger alignment and natural fit; note occlusion instead of assuming a mismatch.
-- FOOTWEAR: compare left and right shoes/sandals for design, construction, color, scale, orientation and attachment to the feet.
-- HANDS / FINGERS / FEET / TOES: inspect each visible hand and foot at the available resolution. Where a hand is fully visible and not holding or hiding digits, check for the expected five distinct digits (four fingers and a thumb), sensible joints and lengths, clean separation, natural attachment and no merged, fused, extra, missing or distorted digits. Account for perspective, foreshortening, pose, gloves and deliberate stylization; do not flag an obscured or cropped digit as missing. For bare feet with visible toes, check plausible toe count and separation; do not expect visible toes in footwear. State limits when hands/feet are tiny, occluded or outside the crop.
-- BODY: inspect visible anatomy, limb lengths, joints, pose and overall proportions for mismatches. Do not score cropped-out anatomy as a defect.
+Enabled QC parameters and inspection cues:
+${checks.map((check) => `- ${check}: ${QC_CHECK_DETAILS[check] || 'Inspect the visible evidence relevant to this custom production QC requirement.'}`).join('\n')}
 
-Give a concise, image-grounded 2-3 sentence summary that starts by naming the viewpoint/framing and its inspection limits, then calls out the most important visible pass or defect. Prioritize plastic/waxy skin and unnatural hair when present. Include no more than 2 material findings per category and 3 priority fixes. If a detail is too small, hidden, cropped or soft to judge, say so and lower confidence rather than claiming it passed.`
+Inspection sequence:
+1. Triage the target: identify intended image style, shot size, camera angle, viewpoint (front/three-quarter/profile/rear/overhead/low-angle), sharpness, crop, subject(s), key costume/props, and visibility limits. A detail crop belongs to the same target. Reference frames are separate approved context.
+2. Inspect macro structure: composition, subject placement, horizon/perspective, body/object geometry, set continuity, lighting direction, shadows, reflections, focus, and scene integration.
+3. Inspect each visible subject at medium scale: face/identity cues, expression/gaze, hair, anatomy, hands/feet, costume layers, textile paths, ornaments/headwear, props, grips, and contact/intersection points.
+4. Inspect micro-artifacts: extra/missing/merged details, doubled contours, melted geometry, asymmetry, repeated textures, abrupt sharpness or material changes, seams, halos, edge fringing, garbled marks, compression/banding, and tiny defects that are actually resolvable.
+5. Compare only against supplied references. Assess stable design/identity details while allowing intentional changes in pose, camera, lighting, and shot. Without references, mark the reference-continuity category na. A single still cannot validate motion, edit continuity, sound, or unseen angles.
 
-export async function analyzeImage(settings: Settings, imageDataUrls: string | string[], onToken?: (t: string) => void): Promise<string> {
-  const reviewImages = Array.isArray(imageDataUrls) ? imageDataUrls : [imageDataUrls]
+Production severity:
+- critical: shot-breaking or unusable defect (identity substitution, major anatomy/prop failure, severe costume discontinuity, or prominent impossible structure). Decision must be hold.
+- high: clear, prominent issue requiring correction before final; decision must be at least review.
+- medium: visible craft defect that should be fixed before delivery, but is localized or less prominent.
+- low: small polish issue, visible at normal or close inspection, with limited impact.
+Use confidence 0.85-1.0 for unmistakable evidence, 0.60-0.84 for likely evidence, and below 0.60 for uncertain cues; uncertain cues should normally be warn/low confidence, not a confident failure. Merge repeated symptoms of the same root cause, but retain distinct small defects in different locations. Return up to 3 findings per category and up to 5 prioritized fixes. Do not hide a minor but clear defect merely because it is not a critical failure.
+
+Coverage and interpretation rules:
+- Judge only visible pixels. Distinguish absent, defective, occluded, cropped, too small/soft, and not applicable. Do not pass an uninspected category. Use warn when a production-relevant visible detail is unresolved and na only when genuinely irrelevant or absent from the frame.
+- For photoreal/semi-real skin, inspect pore/grain detail and flag waxy, airbrushed, rubbery or plastic finish as high-impact. Do not require pores on stylized artwork. Inspect hair for strand separation, painted/molded appearance, clumping, hairline and unnatural edges.
+- For all genders and costume traditions, inspect the garments actually shown: saree/pallu/pleats, dhoti/waistband/hem, angavastram/uttariya, robes, shawls, armor layers and transitions. Do not assume historical accuracy or mandatory accessories without a supplied spec/reference.
+- For hands, assess four fingers plus thumb when fully visible; account for grip, foreshortening, gloves and occlusion. Check toes only on visible bare feet.
+- Inspect AI-generation tells: fused/duplicated anatomy, asymmetric eyes, inconsistent jewelry, broken weapon geometry, floating/embedded objects, impossible object joins, background warping, repeated details, texture discontinuities, ghosting and edge artifacts.
+- Check lighting/shadows/reflections for shared direction and grounding. Check signs, scripts and symbols only against readable intent/reference; do not infer language or cultural meaning from illegible marks.
+- An assessment must report the actual region or sub-elements checked. The attire assessment must name the visible garment panels/transitions traced. The reference assessment must state what matched or diverged, or say not applicable.
+- Set decision to hold for any critical issue; review for high issues, unresolved required checks, or visible medium issues; ready only when no material finding remains and coverage is sufficient. Keep the overall score aligned with this decision. Return a concise 2-4 sentence summary naming view/shot and the main release risk or readiness result.`
+
+export async function analyzeImage(settings: Settings, reviewImages: ReviewImageInput[], onToken?: (t: string) => void): Promise<string> {
   const sys = SYSTEM_PROMPT(settings.checks)
-  const userText = 'First identify the character viewpoint and crop. Image 1 is the full frame. Any following image is a focused crop from that same frame, supplied to help inspect garment detail; it is not a second view or a design reference. Perform angle-aware QC only on visible details, explicitly trace visible attire/textile pattern continuity for the garments present, and return JSON only.'
+  const hasReferences = reviewImages.some((image) => image.role === 'reference')
+  const userText = `First identify the target shot's viewpoint, shot type, and crop. The primary target frame is labeled. A garment-detail image is a crop from that same target, not another shot. ${hasReferences ? 'Images labeled as references are approved design/continuity references, not part of the target frame; compare stable identity, costume, prop and palette details while allowing pose, camera and lighting changes.' : 'No reference frames were supplied; do not claim shot-to-shot continuity was checked.'} Perform all applicable production QC checks on visible evidence and return JSON only.`
 
   if (settings.provider === 'openai' || settings.provider === 'opencode' || settings.provider === 'openrouter' || settings.provider === 'custom') {
     const body: any = {
@@ -47,9 +66,9 @@ export async function analyzeImage(settings: Settings, imageDataUrls: string | s
         { role: 'system', content: sys },
         { role: 'user', content: [
           { type: 'text', text: userText },
-          ...reviewImages.flatMap((url, index) => [
-            ...(index > 0 ? [{ type: 'text', text: `Image ${index + 1}: focused garment and textile crop from the same original frame.` }] : []),
-            { type: 'image_url', image_url: { url } },
+          ...reviewImages.flatMap((image, index) => [
+            { type: 'text', text: imageLabel(image, index, reviewImages.slice(0, index).filter((candidate) => candidate.role === 'reference').length + 1) },
+            { type: 'image_url', image_url: { url: image.dataUrl } },
           ]),
         ] },
       ],
@@ -107,10 +126,10 @@ export async function analyzeImage(settings: Settings, imageDataUrls: string | s
         role: 'user',
         content: [
           { type: 'text', text: userText },
-          ...reviewImages.flatMap((url, index) => {
-            const { mediaType, base64 } = dataUrlToBase64(url)
+          ...reviewImages.flatMap((image, index) => {
+            const { mediaType, base64 } = dataUrlToBase64(image.dataUrl)
             return [
-              ...(index > 0 ? [{ type: 'text', text: `Image ${index + 1}: focused garment and textile crop from the same original frame.` }] : []),
+              { type: 'text', text: imageLabel(image, index, reviewImages.slice(0, index).filter((candidate) => candidate.role === 'reference').length + 1) },
               { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
             ]
           }),
@@ -150,10 +169,10 @@ export async function analyzeImage(settings: Settings, imageDataUrls: string | s
       systemInstruction: { parts: [{ text: sys }] },
       contents: [{ role: 'user', parts: [
         { text: userText },
-        ...reviewImages.flatMap((url, index) => {
-          const { mediaType, base64 } = dataUrlToBase64(url)
+        ...reviewImages.flatMap((image, index) => {
+          const { mediaType, base64 } = dataUrlToBase64(image.dataUrl)
           return [
-            ...(index > 0 ? [{ text: `Image ${index + 1}: focused garment and textile crop from the same original frame.` }] : []),
+            { text: imageLabel(image, index, reviewImages.slice(0, index).filter((candidate) => candidate.role === 'reference').length + 1) },
             { inlineData: { mimeType: mediaType, data: base64 } },
           ]
         }),
@@ -197,12 +216,25 @@ export async function analyzeImage(settings: Settings, imageDataUrls: string | s
   throw new Error('Unsupported provider')
 }
 
-export function parseReport(text: string, enabledChecks: string[] = []): any {
+export function parseReport(text: string, enabledChecks: string[] = [], hasReferences = false): any {
   // strip code fences
   let t = text.trim()
   if (!t) throw new Error('The free vision model returned no report. Please retry the image review.')
   t = t.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')
-  const finalize = (report: any) => ensureGarmentAssessment(ensureSummary(report), enabledChecks)
+  const finalize = (report: any) => {
+    report = ensureSummary(report)
+    ensureGarmentAssessment(report, enabledChecks)
+    ensureReferenceAssessment(report, enabledChecks, hasReferences)
+    report.decision = normalizeDecision(report)
+    report.production_context = {
+      shot_type: report.production_context?.shot_type || 'Not specified',
+      viewpoint: report.production_context?.viewpoint || 'Not specified',
+      visual_style: report.production_context?.visual_style || 'Not specified',
+      coverage_notes: Array.isArray(report.production_context?.coverage_notes) ? report.production_context.coverage_notes : [],
+      reference_comparison: report.production_context?.reference_comparison || (hasReferences ? 'Reference comparison was requested; inspect its category assessment.' : 'Not assessed; no reference frames were supplied.'),
+    }
+    return report
+  }
   try { return finalize(JSON.parse(t)) } catch (error) {
     if (error instanceof Error && error.message.includes('summary')) throw error
   }
@@ -217,7 +249,7 @@ export function parseReport(text: string, enabledChecks: string[] = []): any {
 }
 
 function ensureGarmentAssessment(report: any, enabledChecks: string[]): any {
-  const garmentCheckEnabled = enabledChecks.some(check => /attire|drape|shawl|saree|sari|dhoti|uttariya|angavastram|garment|fabric|textile|pattern|wardrobe|costume|clothing/i.test(check))
+  const garmentCheckEnabled = enabledChecks.some(check => /attire|drape|shawl|saree|sari|dhoti|uttariya|angavastram|garment|fabric|textile|pattern|wardrobe|costume|clothing|wardrobe/i.test(check))
   if (!garmentCheckEnabled) return report
 
   if (!Array.isArray(report.categories)) report.categories = []
@@ -225,7 +257,8 @@ function ensureGarmentAssessment(report: any, enabledChecks: string[]): any {
   const missingCategory = !category
   if (!category) {
     category = {
-      name: 'Attire & textile continuity (dhoti/saree drapes, shawls, borders, motifs and panel transitions)',
+      domain: 'Wardrobe & textiles',
+      name: 'Attire & textile continuity: saree/dhoti, drapes, motifs, borders & transitions',
       status: 'warn',
       score: 45,
       assessment: 'The model response omitted the required attire and textile continuity inspection, so the visible design cannot be verified from this result.',
@@ -245,7 +278,7 @@ function ensureGarmentAssessment(report: any, enabledChecks: string[]): any {
   const missingTrace = missingCategory || !assessmentText.trim() || (category.status !== 'na' && !(namesGarmentDetail && explainsContinuity)) || passContradiction
   if (missingTrace) {
     if (!assessmentText.trim() || missingCategory || !(namesGarmentDetail && explainsContinuity)) {
-    category.assessment = 'No garment-pattern trace was returned. Continuity is unverified; inspect the visible attire and textile panels manually.'
+    category.assessment = 'No garment/textile trace was returned. Continuity is unverified; inspect the visible panels manually.'
     }
     if (!['warn', 'fail'].includes(category.status)) {
       category.status = 'warn'
@@ -259,20 +292,74 @@ function ensureGarmentAssessment(report: any, enabledChecks: string[]): any {
     }
     if (!Array.isArray(report.priority_fixes)) report.priority_fixes = []
     if (!report.priority_fixes.some((fix: string) => /garment|attire|textile|saree|dhoti|drape|shawl|continuity/i.test(fix))) {
-      report.priority_fixes.unshift('Review the visible attire border/motif transitions; the model did not provide a verifiable continuity trace.')
-      report.priority_fixes = report.priority_fixes.slice(0, 3)
+      report.priority_fixes.unshift('Review the visible costume border/motif transitions; the model did not provide a verifiable continuity trace.')
+      report.priority_fixes = report.priority_fixes.slice(0, 5)
     }
   }
   if (!Array.isArray(category.findings)) category.findings = []
   if (missingTrace && !category.findings.length) {
     category.findings.push({
-      issue: 'The response did not explain which garment panels, motifs, or borders were traced, so continuity is not confirmed.',
+      issue: 'The response did not explain which costume panels, motifs, or borders were traced, so continuity is not confirmed.',
       severity: 'medium',
-      location: 'Visible attire, drape, or textile panels',
+      location: 'Visible costume, drape, or textile panels',
       fix: 'Review the garment detail crop and rerun the continuity check if the pattern remains unclear.',
     })
   }
   return report
+}
+
+function ensureReferenceAssessment(report: any, enabledChecks: string[], hasReferences: boolean): void {
+  if (!enabledChecks.some((check) => /reference.frame|shot.to.shot|reference comparison/i.test(check))) return
+  if (!Array.isArray(report.categories)) report.categories = []
+  let category = report.categories.find((item: any) => /reference.frame|shot.to.shot|reference comparison/i.test(String(item?.name || '')))
+  if (!category) {
+    category = { domain: 'Continuity', name: 'Reference-frame character / costume continuity (when references are supplied)', status: hasReferences ? 'warn' : 'na', score: hasReferences ? 40 : 0, assessment: '', findings: [] }
+    report.categories.push(category)
+  }
+  if (!hasReferences) {
+    category.status = 'na'
+    category.score = 0
+    category.assessment = 'No approved reference frames were supplied; identity and shot-to-shot design continuity were not assessed.'
+    category.findings = []
+    return
+  }
+
+  const assessment = typeof category.assessment === 'string' ? category.assessment : ''
+  const evidence = `${assessment} ${(category.findings || []).map((finding: any) => `${finding?.issue || ''} ${finding?.evidence || ''} ${finding?.location || ''}`).join(' ')}`
+  const namesComparedElements = /identity|face|costume|wardrobe|ornament|jewelry|jewellery|prop|palette|color|colour|silhouette|design/i.test(evidence)
+  const namesComparison = /match|consistent|continu|differ|drift|change|compare|reference|unverif|cannot|unable/i.test(evidence)
+  const missingAssessment = !assessment.trim() || !(namesComparedElements && namesComparison)
+  const contradictoryPass = category.status === 'pass' && (category.findings?.length > 0 || /drift|differ|change|unverif|cannot|unable/i.test(evidence))
+  if (!missingAssessment && !contradictoryPass) return
+
+  category.status = category.status === 'fail' ? 'fail' : 'warn'
+  category.score = Math.min(Number.isFinite(Number(category.score)) ? Number(category.score) : 100, 55)
+  category.assessment = 'Reference frames were supplied, but the response did not document a reliable comparison of stable character/costume/prop details.'
+  if (!Array.isArray(category.findings)) category.findings = []
+  if (!category.findings.length) category.findings.push({
+    issue: 'Reference continuity was not verified in the model response.',
+    evidence: 'The reference comparison did not identify matched or divergent design cues.',
+    location: 'Target frame compared with supplied references',
+    severity: 'medium',
+    confidence: 1,
+    fix: 'Review identity, costume, prop, and palette continuity against the supplied reference frames.',
+  })
+  const overallScore = Number(report.overall_score)
+  report.overall_score = Math.min(Number.isFinite(overallScore) ? overallScore : 100, 75)
+  if (!Array.isArray(report.priority_fixes)) report.priority_fixes = []
+  if (!report.priority_fixes.some((fix: string) => /reference|continuity/i.test(fix))) {
+    report.priority_fixes.unshift('Complete the supplied reference-frame comparison before approving this shot.')
+    report.priority_fixes = report.priority_fixes.slice(0, 5)
+  }
+}
+
+function normalizeDecision(report: any): 'ready' | 'review' | 'hold' {
+  const categories = Array.isArray(report.categories) ? report.categories : []
+  const critical = categories.some((category: any) => category?.status === 'fail' || category?.findings?.some((finding: any) => finding?.severity === 'critical'))
+  if (critical) return 'hold'
+  const review = categories.some((category: any) => category?.status === 'warn' || category?.status === 'fail' || category?.findings?.some((finding: any) => ['high', 'medium'].includes(finding?.severity)))
+  if (review) return 'review'
+  return 'ready'
 }
 
 function ensureSummary(report: any): any {

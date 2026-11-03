@@ -4,6 +4,7 @@ import { createGarmentDetailImage, resizeImage } from '../lib/image'
 import { analyzeImage, parseReport } from '../lib/llm'
 import { PROVIDER_DEFAULTS } from '../lib/types'
 import { Uploader } from './Uploader'
+import { ReferenceFramesPanel } from './ReferenceFramesPanel'
 import { ScanLine, X, Cpu, BarChart3, RefreshCw, Layers, Zap, ChevronRight } from 'lucide-react'
 
 const PIPELINE_NODES = [
@@ -30,8 +31,8 @@ const PIPELINE_NODES = [
   },
   {
     icon: '⟁',
-    label: 'Zero Storage',
-    desc: 'All processed in-browser',
+    label: 'Transient Review',
+    desc: 'Images sent for model analysis',
     color: 'rgba(16,185,129,0.12)',
     border: 'rgba(16,185,129,0.3)',
   },
@@ -43,6 +44,7 @@ export function AnalyzePanel() {
   const imageName   = useStore((s) => s.imageName)
   const imageWidth  = useStore((s) => s.imageWidth)
   const imageHeight = useStore((s) => s.imageHeight)
+  const referenceFrames = useStore((s) => s.referenceFrames)
   const settings    = useStore((s) => s.settings)
   const isAnalyzing = useStore((s) => s.isAnalyzing)
   const progress    = useStore((s) => s.progress)
@@ -66,8 +68,18 @@ export function AnalyzePanel() {
     try {
       const { dataUrl } = await resizeImage(image, 2048, 0.94)
       const garmentDetail = inspectGarments ? createGarmentDetailImage(image) : null
-      const reviewImages = garmentDetail ? [dataUrl, garmentDetail] : [dataUrl]
-      setAnalyzing(true, garmentDetail ? 'Tracing fabric patterns across full frame and detail…' : 'Running neural vision analysis…')
+      const reviewImages = [
+        { dataUrl, role: 'target' as const, label: imageName },
+        ...(garmentDetail ? [{ dataUrl: garmentDetail, role: 'garment-detail' as const }] : []),
+        ...await Promise.all(referenceFrames.map(async (frame) => ({
+          dataUrl: (await resizeImage(frame.image, 2048, 0.9)).dataUrl,
+          role: 'reference' as const,
+          label: frame.name,
+        }))),
+      ]
+      setAnalyzing(true, referenceFrames.length
+        ? `Comparing target with ${referenceFrames.length} reference frame${referenceFrames.length === 1 ? '' : 's'}…`
+        : garmentDetail ? 'Tracing garment patterns across full frame and detail…' : 'Running production QC analysis…')
       const text = await analyzeImage({
         ...settings,
         provider: 'gemini',
@@ -76,8 +88,9 @@ export function AnalyzePanel() {
         model: PROVIDER_DEFAULTS.gemini.model,
       }, reviewImages, (t) => setRaw(t))
       setAnalyzing(true, 'Parsing QC report…')
-      const report = parseReport(text, settings.checks)
+      const report = parseReport(text, settings.checks, referenceFrames.length > 0)
       report.raw = text
+      report.source_reference_names = referenceFrames.map((frame) => frame.name)
       setReport(report)
       addHistory({
         id: 'run_' + Date.now(),
@@ -221,6 +234,8 @@ export function AnalyzePanel() {
                 {settings.checks.length} quality checks · Vision-enabled
               </div>
             </div>
+
+            <ReferenceFramesPanel />
 
             {/* Run Button */}
             <button

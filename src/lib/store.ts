@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { PROVIDER_DEFAULTS, DEFAULT_CHECKS } from './types'
-import type { Settings, RunRecord } from './types'
+import type { Settings, RunRecord, ReferenceFrame } from './types'
 
+const CHECK_MATRIX_VERSION = '3'
 const LEGACY_DEFAULT_CHECKS = [
   'Symmetry & proportions (left vs right ornaments)',
   'Jewellery design consistency on both sides',
@@ -20,12 +21,14 @@ const LEGACY_DEFAULT_CHECKS = [
   'Bangles, bracelets & rings: count, matching design, scale & fit',
   'Footwear match, construction & fit on both feet',
   'Body proportions, anatomy, pose & overall image finish',
-]
-const PREVIOUS_ATTIRE_CHECKS = [
+  'Viewpoint, visible coverage & crop-aware QC assessment',
+  'Hands, fingers, feet & toes: natural anatomy and clear separation',
   'Attire, drape, shawl & pattern continuity from top to bottom',
   'Saree, drape & shawl design continuity (borders, motifs, pleats and transitions)',
+  'Attire & textile continuity (dhoti/saree drapes, shawls, borders, motifs and panel transitions)',
+  'Attire / costume continuity top-to-bottom',
+  'Jewellery design consistency on both sides',
 ]
-const CURRENT_ATTIRE_CHECK = 'Attire & textile continuity (dhoti/saree drapes, shawls, borders, motifs and panel transitions)'
 
 type State = {
   settings: Settings
@@ -34,6 +37,7 @@ type State = {
   imageName: string
   imageWidth: number
   imageHeight: number
+  referenceFrames: ReferenceFrame[]
   isAnalyzing: boolean
   progress: string
   report: any | null
@@ -44,6 +48,7 @@ type State = {
   setSettings: (p: Partial<Settings>) => void
   setImage: (img: HTMLImageElement, url: string, name: string) => void
   clearImage: () => void
+  setReferenceFrames: (frames: ReferenceFrame[]) => void
   setAnalyzing: (b: boolean, msg?: string) => void
   setReport: (r: any) => void
   setError: (e: string) => void
@@ -67,19 +72,18 @@ const loadSettings = (): Settings => {
       const savedMaxTokens = Number(parsed.maxTokens)
       parsed.maxTokens = Number.isFinite(savedMaxTokens) && savedMaxTokens >= 4000 ? savedMaxTokens : 4000
       if (Array.isArray(parsed.checks)) {
-        const hasLegacyMatrix = parsed.checks.some((check: string) => LEGACY_DEFAULT_CHECKS.includes(check))
-        const hasCurrentDefault = parsed.checks.some((check: string) => DEFAULT_CHECKS.includes(check))
-        if (hasLegacyMatrix && !hasCurrentDefault) {
-          const customChecks = parsed.checks.filter((check: string) => !LEGACY_DEFAULT_CHECKS.includes(check))
+        const matrixVersion = localStorage.getItem('qc_checks_version') || '0'
+        if (matrixVersion !== CHECK_MATRIX_VERSION) {
+          const customChecks = parsed.checks.filter((check: string) => !LEGACY_DEFAULT_CHECKS.includes(check) && !DEFAULT_CHECKS.includes(check))
           parsed.checks = [...DEFAULT_CHECKS, ...customChecks]
-        } else {
-          parsed.checks = parsed.checks.map((check: string) => PREVIOUS_ATTIRE_CHECKS.includes(check) ? CURRENT_ATTIRE_CHECK : check)
+          try { localStorage.setItem('qc_checks_version', CHECK_MATRIX_VERSION) } catch {}
         }
       }
       try { localStorage.setItem('qc_settings', JSON.stringify(parsed)) } catch {}
       return parsed
     }
   } catch {}
+  try { localStorage.setItem('qc_checks_version', CHECK_MATRIX_VERSION) } catch {}
   return { provider: 'gemini', apiKey: '', model: PROVIDER_DEFAULTS.gemini.model, endpoint: PROVIDER_DEFAULTS.gemini.endpoint, temperature: 0.2, maxTokens: 4000, checks: [...DEFAULT_CHECKS] }
 
 }
@@ -98,6 +102,7 @@ export const useStore = create<State>((set) => ({
   imageName: '',
   imageWidth: 0,
   imageHeight: 0,
+  referenceFrames: [],
   isAnalyzing: false,
   progress: '',
   report: null,
@@ -114,11 +119,19 @@ export const useStore = create<State>((set) => ({
     }
     // Never persist API credentials in browser storage.
     next.apiKey = ''
-    try { localStorage.setItem('qc_settings', JSON.stringify(next)) } catch {}
+    try {
+      localStorage.setItem('qc_settings', JSON.stringify(next))
+      localStorage.setItem('qc_checks_version', CHECK_MATRIX_VERSION)
+    } catch {}
     return { settings: next }
   }),
   setImage: (img, url, name) => set({ image: img, imageUrl: url, imageName: name, imageWidth: img.naturalWidth || img.width, imageHeight: img.naturalHeight || img.height, report: null, error: '' }),
   clearImage: () => set({ image: null, imageUrl: null, imageName: '', imageWidth: 0, imageHeight: 0, report: null }),
+  setReferenceFrames: (frames) => set((state) => {
+    const retainedUrls = new Set(frames.map((frame) => frame.url))
+    state.referenceFrames.forEach((frame) => { if (!retainedUrls.has(frame.url)) URL.revokeObjectURL(frame.url) })
+    return { referenceFrames: frames }
+  }),
   setAnalyzing: (b, msg = '') => set({ isAnalyzing: b, progress: msg }),
   setReport: (r) => set({ report: r }),
   setError: (e) => set({ error: e }),

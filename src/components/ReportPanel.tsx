@@ -86,15 +86,19 @@ export function ReportPanel() {
   const attention = categories.filter((category: any) => category.status === 'warn' || category.status === 'fail').length
   const critical = categories.reduce((total: number, category: any) => total + (Array.isArray(category.findings) ? category.findings.filter((finding: any) => finding.severity === 'critical').length : 0), 0)
   const firstAttention = categories.findIndex((category: any) => category.status === 'warn' || category.status === 'fail')
+  const decision = report.decision || (critical || categories.some((category: any) => category.status === 'fail') ? 'hold' : attention ? 'review' : 'ready')
+  const production = report.production_context || {}
 
   const exportJson = () => saveAs(new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' }), `${imageName || 'qc'}_report.json`)
   const exportMd = () => {
-    let md = `# QC Review — ${imageName || 'Image'}\n\nScore: ${score}/100\n\n${report.summary || ''}\n\n`
+    let md = `# QC Review — ${imageName || 'Image'}\n\nDecision: ${decision.toUpperCase()}\nScore: ${score}/100\n\n${report.summary || ''}\n\n`
+    md += `## Shot Context\n- Shot type: ${production.shot_type || 'Not classified'}\n- Viewpoint: ${production.viewpoint || 'Not classified'}\n- Visual style: ${production.visual_style || 'Not classified'}\n- Visible coverage: ${Array.isArray(production.coverage_notes) ? production.coverage_notes.join('; ') : production.coverage_notes || 'Not described'}\n- Reference comparison: ${production.reference_comparison || 'Not supplied'}\n\n`
     categories.forEach((category: any) => {
       md += `## ${category.name} — ${(category.status || 'na').toUpperCase()} (${category.score ?? 0})\n`
+      if (category.domain) md += `Domain: ${category.domain}\n`
       if (category.assessment) md += `Assessment: ${category.assessment}\n`
       ;(category.findings || []).forEach((finding: any) => {
-        md += `- [${finding.severity || 'note'}] ${finding.issue || ''}${finding.location ? ` (${finding.location})` : ''}\n  - Fix: ${finding.fix || 'Review manually'}\n`
+        md += `- [${finding.severity || 'note'}] ${finding.issue || ''}${finding.location ? ` (${finding.location})` : ''}${Number.isFinite(Number(finding.confidence)) ? ` — confidence ${Math.round(Number(finding.confidence) * 100)}%` : ''}\n  - Evidence: ${finding.evidence || 'Not recorded'}\n  - Fix: ${finding.fix || 'Review manually'}\n`
       })
       md += '\n'
     })
@@ -124,9 +128,10 @@ export function ReportPanel() {
           <div className="feature-orbit feature-orbit-two" />
           <div className="score-feature-copy">
             <span className="feature-index">01 / OVERALL READ</span>
-            <h2>{score >= 80 ? 'Strong finish' : score >= 60 ? 'Review details' : 'Needs attention'}</h2>
-            <p>{attention ? `${attention} of ${categories.length} checks need a closer look.` : 'No significant issues were flagged in the visible details.'}</p>
-            <div className="score-feature-meta"><span><i className="live-dot" /> VISION REVIEW</span><span>{categories.length} CHECKS</span></div>
+            <span className={`decision-badge ${decision}`}><i /> {decision === 'ready' ? 'READY FOR REVIEW' : decision === 'hold' ? 'HOLD FOR FIXES' : 'REVIEW REQUIRED'}</span>
+            <h2>{decision === 'ready' ? 'Ready for review' : decision === 'hold' ? 'Hold this frame' : 'Review before approval'}</h2>
+            <p>{attention ? `${attention} of ${categories.length} checks need attention.` : 'No significant defects were flagged in the visible details. Confirm shot-level requirements before approval.'}</p>
+            <div className="score-feature-meta"><span><i className="live-dot" /> STILL FRAME QC</span><span>{categories.length} DOMAINS</span></div>
           </div>
           <ScoreRing score={score} />
         </article>
@@ -135,6 +140,18 @@ export function ReportPanel() {
           <div className="visual-card-head"><div><span className="feature-index">02 / CATEGORY MAP</span><h3>Quality profile</h3></div><Target size={18} /></div>
           <QualityRadar categories={categories} />
         </article>
+      </section>
+
+      <section className="production-context-card">
+        <div className="production-context-heading"><span className="feature-index">SHOT CONTEXT</span>{report.source_reference_names?.length ? <span>{report.source_reference_names.length} REFERENCE FRAME{report.source_reference_names.length === 1 ? '' : 'S'}</span> : <span>SINGLE FRAME REVIEW</span>}</div>
+        <div className="production-context-grid">
+          <div><span>Shot type</span><strong>{production.shot_type || 'Not classified'}</strong></div>
+          <div><span>Viewpoint</span><strong>{production.viewpoint || 'Not classified'}</strong></div>
+          <div><span>Visual style</span><strong>{production.visual_style || 'Not classified'}</strong></div>
+        </div>
+        <p>{Array.isArray(production.coverage_notes) && production.coverage_notes.length ? production.coverage_notes.join(' · ') : production.coverage_notes || 'Findings apply only to details visible in this frame. Occluded or cropped areas are marked not visible.'}</p>
+        {report.source_reference_names?.length > 0 && <p className="reference-source-line">Compared with: {report.source_reference_names.join(', ')}</p>}
+        {production.reference_comparison && <p className="reference-source-line">Reference result: {production.reference_comparison}</p>}
       </section>
 
       <section className="signal-strip" aria-label="Quality check totals">
@@ -168,7 +185,7 @@ export function ReportPanel() {
               <details className={`visual-category ${category.status || 'na'}`} key={`${category.name}-${i}`} open={i === firstAttention} style={{ animationDelay: `${Math.min(i, 8) * 45}ms` }}>
                 <summary>
                   <span className="category-index">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="category-main"><strong>{category.name}</strong><span>{findings.length ? `${findings.length} finding${findings.length === 1 ? '' : 's'}${impact ? ' · high impact' : ''}` : 'No visible defect flagged'}</span></span>
+                  <span className="category-main"><strong>{category.name}</strong><span>{category.domain ? `${category.domain} · ` : ''}{findings.length ? `${findings.length} finding${findings.length === 1 ? '' : 's'}${impact ? ' · high impact' : ''}` : category.status === 'na' ? 'Not visible or not assessed' : 'No visible defect flagged'}</span></span>
                   <span className="category-meter"><span style={{ width: `${value}%`, background: scoreColor(value) }} /></span>
                   <span className="category-score" style={{ color: scoreColor(value) }}>{value}<small>/100</small></span>
                   <StatusPill status={category.status || 'na'} />
@@ -180,6 +197,8 @@ export function ReportPanel() {
                     <article className={`visual-finding ${finding.severity || 'low'}`} key={j}>
                       <div className="finding-topline"><span className={`finding-severity ${finding.severity || 'low'}`}>{(finding.severity || 'note').toUpperCase()}</span>{finding.location && <span className="finding-location">{finding.location}</span>}</div>
                       <h4>{finding.issue}</h4>
+                      {finding.evidence && <p className="finding-evidence"><strong>Evidence</strong>{finding.evidence}</p>}
+                      {Number.isFinite(Number(finding.confidence)) && <span className="finding-confidence">MODEL CONFIDENCE {Math.round(Number(finding.confidence) * 100)}%</span>}
                       <p><ArrowUpRight size={13} /> {finding.fix || 'Review this detail at full resolution.'}</p>
                     </article>
                   )) : (

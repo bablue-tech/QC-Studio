@@ -1,6 +1,6 @@
 import { useStore } from '../lib/store'
-import { DEFAULT_CHECKS } from '../lib/types'
-import { Settings, Cpu, ToggleLeft, ToggleRight, Plus, X, ShieldCheck, Sliders, Brain } from 'lucide-react'
+import { DEFAULT_CHECKS, QC_CHECK_DETAILS } from '../lib/types'
+import { Settings, Cpu, ToggleRight, Plus, X, ShieldCheck, Sliders, Brain } from 'lucide-react'
 import { useState } from 'react'
 
 export function SetupPanel() {
@@ -119,7 +119,7 @@ export function SetupPanel() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
           <div>
             <label className="form-label">
-              Analysis Depth
+              Response variation
               <span style={{ color: 'var(--azure)', marginLeft: 8, fontWeight: 700 }}>{settings.temperature}</span>
             </label>
             <input
@@ -133,10 +133,10 @@ export function SetupPanel() {
               fontSize: 10, color: 'var(--text-muted)',
               fontFamily: 'var(--font-mono)', marginTop: 5,
             }}>
-              <span>Precise</span><span>Creative</span>
+              <span>More repeatable</span><span>More variable</span>
             </div>
             <p style={{ fontSize: 11.5, color: 'var(--text-soft)', marginTop: 8 }}>
-              Lower values yield more deterministic, repeatable analysis results.
+              This changes response variation, not inspection depth. Lower values are usually more consistent for production QC.
             </p>
           </div>
 
@@ -145,8 +145,14 @@ export function SetupPanel() {
             <input
               id="input-max-tokens"
               type="number"
+              min={4000}
+              max={8000}
+              step={500}
               value={settings.maxTokens}
-              onChange={(e) => setSettings({ maxTokens: +e.target.value })}
+              onChange={(e) => {
+                const value = Number(e.target.value)
+                if (Number.isFinite(value)) setSettings({ maxTokens: Math.max(4000, Math.min(8000, value)) })
+              }}
               className="form-input mono"
               style={{ marginTop: 8 }}
             />
@@ -165,15 +171,12 @@ export function SetupPanel() {
           <span style={{ color: 'var(--azure)', fontWeight: 700 }}>{settings.checks.length} active</span>
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+        <p className="qc-matrix-intro">Select the production domains to inspect. Each enabled domain receives an evidence note, score, risk status, and actionable findings.</p>
+        <div className="qc-check-grid">
           {DEFAULT_CHECKS.map((c) => {
             const on = settings.checks.includes(c)
             return (
-              <label key={c} className={`check-tag${on ? ' on' : ''}`} id={`check-${c.slice(0, 10).replace(/\s/g, '-')}`}>
-                {on
-                  ? <ToggleRight size={13} color="var(--azure)" />
-                  : <ToggleLeft size={13} color="var(--text-muted)" />
-                }
+              <label key={c} className={`qc-check-card${on ? ' on' : ''}`}>
                 <input
                   type="checkbox"
                   checked={on}
@@ -181,14 +184,15 @@ export function SetupPanel() {
                     const next = on ? settings.checks.filter(x => x !== c) : [...settings.checks, c]
                     setSettings({ checks: next })
                   }}
-                  style={{ display: 'none' }}
                 />
-                {c}
+                <span className="qc-check-title">{c}</span>
+                <span className="qc-check-description">{QC_CHECK_DETAILS[c]}</span>
               </label>
             )
           })}
+        </div>
 
-          {/* Custom checks */}
+        <div className="custom-check-list">
           {settings.checks.filter(c => !DEFAULT_CHECKS.includes(c)).map((c) => (
             <span key={c} className="check-tag on" style={{ paddingRight: 6 }}>
               <ToggleRight size={13} color="var(--azure)" />
