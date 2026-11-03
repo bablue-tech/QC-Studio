@@ -2,6 +2,8 @@
 
 FrameProof is a visual quality-control workspace for reviewing character and product imagery. Upload an image, run a structured vision review, and export or revisit the resulting report.
 
+For a non-technical flowsheet and backend overview, see [docs/architecture-overview.md](docs/architecture-overview.md).
+
 ## Run locally
 
 1. Create `.env.local` with `GEMINI_API_KEY=your_key`.
