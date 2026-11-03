@@ -4,6 +4,7 @@ FrameProof is a visual quality-control workspace for reviewing character and pro
 
 For a non-technical flowsheet and backend overview, see [docs/architecture-overview.md](docs/architecture-overview.md).
 For the step-by-step process, technology purposes, and source-code percentage breakdown, see [docs/process-and-technology-guide.md](docs/process-and-technology-guide.md).
+For a free online deployment walkthrough, see [docs/free-hosting-guide.md](docs/free-hosting-guide.md). The repository's [`render.yaml`](render.yaml) configures the Render web service and prompts for the Gemini key as a secret during setup.
 
 ## Run locally
 
