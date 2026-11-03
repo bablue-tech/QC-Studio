@@ -13,6 +13,16 @@ export type Finding = {
   confidence?: number
 }
 
+export type TextileTrace = {
+  garment_segment: string
+  path: string
+  observed_design: string
+  transitions_checked: string[]
+  result: 'consistent' | 'break' | 'unverified'
+  location?: string
+  evidence?: string
+}
+
 export type QCCategory = {
   domain?: string
   name: string
@@ -20,6 +30,8 @@ export type QCCategory = {
   score: number
   assessment?: string
   findings: Finding[]
+  continuity_traces?: TextileTrace[]
+  textile_path_coverage?: 'all_visible_paths' | 'partial' | 'none'
 }
 
 export type QCProductionContext = {
@@ -91,7 +103,7 @@ export const QC_CHECK_DETAILS: Record<string, string> = {
   'Anatomy, proportions, pose & contact points': 'Review limb lengths, joints, neck/shoulder attachment, posture, balance, foreshortening, body intersections and whether contact with ground, seat or other objects reads physically plausible.',
   'Hands, fingers, feet & toes: structure and separation': 'Inspect each sufficiently visible hand for four fingers plus thumb, joints, separation, grip and attachment. Review visible bare toes and feet; account for crop, pose, gloves, footwear and occlusion.',
   'Wardrobe silhouette, fit, layers & construction': 'Check garment fit, shoulder/waist attachment, seams, closures, folds, thickness, layer order, clipping, floating fabric, impossible intersections and whether cloth follows the pose.',
-  'Attire & textile continuity: saree/dhoti, drapes, motifs, borders & transitions': 'Trace visible saree pallu/pleats, dhoti waist folds/hem, angavastram/uttariya, shawls, armor-to-fabric boundaries and repeated motifs. Compare border width, motif spacing/orientation, color and joins across visible panels.',
+  'Attire & textile continuity: saree/dhoti, drapes, motifs, borders & transitions': 'Trace every visible connected border path separately from its start to end, especially shoulder/chest → waist/hand overlap → lower drape and any shawl-to-body transition. At each seam, fold, overlap and motif-repeat boundary compare motif identity, order, spacing, scale, orientation, color, border width and edge trims. Name the exact transition; treat occluded joins as unverified, not continuous.',
   'Jewelry, ornaments, tilak & paired accessory consistency': 'Check visible earrings, nose pin when design calls for it, necklaces, armlets, bangles, rings, tilak and paired ornaments for count, symmetry, structure, fit, attachment, duplication and intersections.',
   'Crown, headwear & attachment to the character': 'Inspect scale, perspective, centerline, contact points, hair interaction, floating/clipping, rear construction and whether the headwear is physically seated on the head.',
   'Props, weapons & object geometry / grip': 'Check weapon/prop topology, symmetry, handles, blades, repeated parts, material transitions, hand grip, object-to-body intersections, duplicate/melted geometry and plausible scale.',

@@ -97,6 +97,10 @@ export function ReportPanel() {
       md += `## ${category.name} — ${(category.status || 'na').toUpperCase()} (${category.score ?? 0})\n`
       if (category.domain) md += `Domain: ${category.domain}\n`
       if (category.assessment) md += `Assessment: ${category.assessment}\n`
+      if (category.textile_path_coverage) md += `Textile path coverage: ${category.textile_path_coverage}\n`
+      ;(category.continuity_traces || []).forEach((trace: any) => {
+        md += `- Textile trace (${trace.result || 'unverified'}): ${trace.garment_segment || 'Garment'} — ${trace.path || 'path not specified'}\n  - Observed: ${trace.observed_design || 'Not described'}\n  - Transitions: ${(trace.transitions_checked || []).join('; ') || 'None listed'}\n  - Evidence: ${trace.evidence || 'Not recorded'}\n`
+      })
       ;(category.findings || []).forEach((finding: any) => {
         md += `- [${finding.severity || 'note'}] ${finding.issue || ''}${finding.location ? ` (${finding.location})` : ''}${Number.isFinite(Number(finding.confidence)) ? ` — confidence ${Math.round(Number(finding.confidence) * 100)}%` : ''}\n  - Evidence: ${finding.evidence || 'Not recorded'}\n  - Fix: ${finding.fix || 'Review manually'}\n`
       })
@@ -193,6 +197,20 @@ export function ReportPanel() {
                 </summary>
                 <div className="category-detail">
                   {category.assessment && <p className="category-assessment"><span>INSPECTION NOTE</span>{category.assessment}</p>}
+                  {category.continuity_traces?.length > 0 && (
+                    <div className="textile-trace-list">
+                      <div className="textile-trace-heading"><span>TEXTILE PATH TRACE</span><b>{category.textile_path_coverage === 'all_visible_paths' ? 'ALL VISIBLE PATHS COVERED' : 'PARTIAL COVERAGE'}</b></div>
+                      {category.continuity_traces.map((trace: any, traceIndex: number) => (
+                        <article className={`textile-trace ${trace.result || 'unverified'}`} key={traceIndex}>
+                          <div><strong>{trace.garment_segment || 'Garment segment'}</strong><span>{(trace.result || 'unverified').replace('_', ' ').toUpperCase()}</span></div>
+                          <p><b>Path</b> {trace.path || 'Not specified'}</p>
+                          <p><b>Observed design</b> {trace.observed_design || 'Not described'}</p>
+                          <p><b>Transitions checked</b> {(trace.transitions_checked || []).join(' · ') || 'None listed'}</p>
+                          {trace.evidence && <p><b>Evidence</b> {trace.evidence}</p>}
+                        </article>
+                      ))}
+                    </div>
+                  )}
                   {findings.length ? findings.map((finding: any, j: number) => (
                     <article className={`visual-finding ${finding.severity || 'low'}`} key={j}>
                       <div className="finding-topline"><span className={`finding-severity ${finding.severity || 'low'}`}>{(finding.severity || 'note').toUpperCase()}</span>{finding.location && <span className="finding-location">{finding.location}</span>}</div>

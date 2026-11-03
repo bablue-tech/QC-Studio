@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../lib/store'
-import { createGarmentDetailImage, resizeImage } from '../lib/image'
+import { createGarmentDetailImage, createTextileTransitionImage, resizeImage } from '../lib/image'
 import { analyzeImage, parseReport } from '../lib/llm'
 import { PROVIDER_DEFAULTS } from '../lib/types'
 import { Uploader } from './Uploader'
@@ -68,9 +68,11 @@ export function AnalyzePanel() {
     try {
       const { dataUrl } = await resizeImage(image, 2048, 0.94)
       const garmentDetail = inspectGarments ? createGarmentDetailImage(image) : null
+      const textileTransition = inspectGarments ? createTextileTransitionImage(image) : null
       const reviewImages = [
         { dataUrl, role: 'target' as const, label: imageName },
-        ...(garmentDetail ? [{ dataUrl: garmentDetail, role: 'garment-detail' as const }] : []),
+        ...(garmentDetail ? [{ dataUrl: garmentDetail, role: 'garment-detail' as const, label: 'full garment context crop' }] : []),
+        ...(textileTransition ? [{ dataUrl: textileTransition, role: 'garment-detail' as const, label: 'magnified torso/waist textile transition crop' }] : []),
         ...await Promise.all(referenceFrames.map(async (frame) => ({
           dataUrl: (await resizeImage(frame.image, 2048, 0.9)).dataUrl,
           role: 'reference' as const,
@@ -79,7 +81,7 @@ export function AnalyzePanel() {
       ]
       setAnalyzing(true, referenceFrames.length
         ? `Comparing target with ${referenceFrames.length} reference frame${referenceFrames.length === 1 ? '' : 's'}…`
-        : garmentDetail ? 'Tracing garment patterns across full frame and detail…' : 'Running production QC analysis…')
+        : garmentDetail || textileTransition ? 'Tracing garment paths across full frame and magnified transitions…' : 'Running production QC analysis…')
       const text = await analyzeImage({
         ...settings,
         provider: 'gemini',

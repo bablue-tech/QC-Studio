@@ -42,6 +42,29 @@ export function createGarmentDetailImage(img: HTMLImageElement, maxSide = 2048, 
   return canvas.toDataURL('image/jpeg', quality)
 }
 
+/** Creates a magnified torso/waist textile transition crop from the same target frame. */
+export function createTextileTransitionImage(img: HTMLImageElement, maxSide = 2048, quality = 0.94): string | null {
+  const width = img.naturalWidth || img.width
+  const height = img.naturalHeight || img.height
+  if (Math.min(width, height) < 720) return null
+
+  const portrait = height > width * 1.08
+  const cropWidth = Math.round(width * (portrait ? 0.72 : 0.68))
+  const cropHeight = Math.round(height * (portrait ? 0.50 : 0.72))
+  const left = Math.round((width - cropWidth) / 2)
+  const top = portrait ? Math.round(height * 0.25) : Math.round((height - cropHeight) / 2)
+  const scale = Math.min(2.5, maxSide / Math.max(cropWidth, cropHeight))
+  const outputWidth = Math.max(1, Math.round(cropWidth * scale))
+  const outputHeight = Math.max(1, Math.round(cropHeight * scale))
+  const canvas = document.createElement('canvas')
+  canvas.width = outputWidth
+  canvas.height = outputHeight
+  const context = canvas.getContext('2d')
+  if (!context) return null
+  context.drawImage(img, left, top, cropWidth, cropHeight, 0, 0, outputWidth, outputHeight)
+  return canvas.toDataURL('image/jpeg', quality)
+}
+
 export function dataUrlToBase64(dataUrl: string): { mediaType: string; base64: string } {
   const m = dataUrl.match(/^data:(.*?);base64,(.*)$/)
   if (!m) throw new Error('bad data url')

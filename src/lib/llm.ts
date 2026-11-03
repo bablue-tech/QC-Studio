@@ -7,7 +7,7 @@ export type ReviewImageInput = { dataUrl: string; role: 'target' | 'garment-deta
 
 const imageLabel = (image: ReviewImageInput, index: number, referenceIndex: number) => {
   if (image.role === 'target') return `Image ${index + 1}: primary target frame${image.label ? ` (${image.label})` : ''}.`
-  if (image.role === 'garment-detail') return `Image ${index + 1}: focused garment detail crop from the target frame; this is not a separate view or reference.`
+  if (image.role === 'garment-detail') return `Image ${index + 1}: ${image.label || 'garment detail crop'} from the target frame; this is not a separate view or reference.`
   return `Image ${index + 1}: approved continuity reference ${referenceIndex}${image.label ? ` (${image.label})` : ''}; compare stable design/identity details while allowing intentional shot, pose, and lighting changes.`
 }
 
@@ -19,6 +19,8 @@ Return ONLY valid JSON with this shape:
   "summary": string,
   "production_context": { "shot_type": string, "viewpoint": string, "visual_style": string, "coverage_notes": string[], "reference_comparison": string },
   "categories": [{ "domain": string, "name": string, "status": "pass"|"warn"|"fail"|"na", "score": number, "assessment": string,
+    "textile_path_coverage": "all_visible_paths"|"partial"|"none",
+    "continuity_traces": [{ "garment_segment": string, "path": string, "observed_design": string, "transitions_checked": string[], "result": "consistent"|"break"|"unverified", "location": string, "evidence": string }],
     "findings": [{ "issue": string, "evidence": string, "location": string, "severity": "low"|"medium"|"high"|"critical", "confidence": number, "fix": string }] }],
   "priority_fixes": string[],
   "extra_observations": string[]
@@ -34,6 +36,14 @@ Inspection sequence:
 3. Inspect each visible subject at medium scale: face/identity cues, expression/gaze, hair, anatomy, hands/feet, costume layers, textile paths, ornaments/headwear, props, grips, and contact/intersection points.
 4. Inspect micro-artifacts: extra/missing/merged details, doubled contours, melted geometry, asymmetry, repeated textures, abrupt sharpness or material changes, seams, halos, edge fringing, garbled marks, compression/banding, and tiny defects that are actually resolvable.
 5. Compare only against supplied references. Assess stable design/identity details while allowing intentional changes in pose, camera, lighting, and shot. Without references, mark the reference-continuity category na. A single still cannot validate motion, edit continuity, sound, or unseen angles.
+
+Mandatory textile trace (never replace this with a generic statement such as "the saree pattern is consistent"):
+- For every visible connected garment border/drape path, return one continuity_traces entry. Trace a named path from its visible start to end, such as shoulder → chest → waist overlap → lower pallu, or shoulder → back panel → hem. Split paths where cloth is genuinely separate; stop at occlusion and mark the hidden transition unverified.
+- At each visible transition compare the actual border width, inner/outer edge trim, motif identity and order, repeat spacing, motif scale/orientation, color, and weave/embroidery density. Rotation from folds/perspective can be natural; a motif/border design change along the same connected panel is a break.
+- State what the pattern looks like before and after each transition. If the motif changes from (for example) small repeating flowers/vines to larger paisley/medallion shapes, or the border band changes width/construction, report the exact location as a continuity defect unless a visible seam or intentional panel boundary explains it. Do not average separate segments into one pass.
+- Use result=break for a visible mismatch and create a finding with localized evidence and a specific repair. Use result=unverified if resolution/occlusion prevents comparison. Set textile_path_coverage to all_visible_paths only after accounting for every assessable connected border/drape path; otherwise use partial or none. A pass requires all_visible_paths plus explicit transition checks on each trace.
+- If reviewer markup (red circles, arrows, strokes, or highlights) appears on the target, treat it as annotation, not artwork. Inspect the indicated area first; ignore the markup itself as a defect. If it obscures the textile evidence, lower confidence and state that limit.
+Populate textile_path_coverage and continuity_traces only in the attire/textile category; omit them or use an empty trace list for unrelated categories.
 
 Production severity:
 - critical: shot-breaking or unusable defect (identity substitution, major anatomy/prop failure, severe costume discontinuity, or prominent impossible structure). Decision must be hold.
@@ -55,7 +65,7 @@ Coverage and interpretation rules:
 export async function analyzeImage(settings: Settings, reviewImages: ReviewImageInput[], onToken?: (t: string) => void): Promise<string> {
   const sys = SYSTEM_PROMPT(settings.checks)
   const hasReferences = reviewImages.some((image) => image.role === 'reference')
-  const userText = `First identify the target shot's viewpoint, shot type, and crop. The primary target frame is labeled. A garment-detail image is a crop from that same target, not another shot. ${hasReferences ? 'Images labeled as references are approved design/continuity references, not part of the target frame; compare stable identity, costume, prop and palette details while allowing pose, camera and lighting changes.' : 'No reference frames were supplied; do not claim shot-to-shot continuity was checked.'} Perform all applicable production QC checks on visible evidence and return JSON only.`
+  const userText = `First identify the target shot's viewpoint, shot type, and crop. The primary target frame is labeled. Garment crops are magnified regions from that same target, not another shot. Trace each visible textile border path from start to end and compare motif/border construction at each waist, overlap, seam, and fold transition; return the required continuity_traces instead of a generic continuity claim. If colored review markup is present, treat it as an attention guide and not as artwork. ${hasReferences ? 'Images labeled as references are approved design/continuity references, not part of the target frame; compare stable identity, costume, prop and palette details while allowing pose, camera and lighting changes.' : 'No reference frames were supplied; do not claim shot-to-shot continuity was checked.'} Perform all applicable production QC checks on visible evidence and return JSON only.`
 
   if (settings.provider === 'openai' || settings.provider === 'opencode' || settings.provider === 'openrouter' || settings.provider === 'custom') {
     const body: any = {
@@ -261,48 +271,96 @@ function ensureGarmentAssessment(report: any, enabledChecks: string[]): any {
       name: 'Attire & textile continuity: saree/dhoti, drapes, motifs, borders & transitions',
       status: 'warn',
       score: 45,
-      assessment: 'The model response omitted the required attire and textile continuity inspection, so the visible design cannot be verified from this result.',
+      assessment: 'The model response omitted the required garment-path trace, so visible textile continuity cannot be verified from this result.',
       findings: [],
+      continuity_traces: [],
+      textile_path_coverage: 'none',
     }
     report.categories.push(category)
   }
 
+  if (!Array.isArray(category.findings)) category.findings = []
+  if (!Array.isArray(category.continuity_traces)) category.continuity_traces = []
+  category.continuity_traces = category.continuity_traces
+    .filter((trace: any) => trace && typeof trace === 'object')
+    .map((trace: any) => ({
+      ...trace,
+      transitions_checked: Array.isArray(trace.transitions_checked)
+        ? trace.transitions_checked.filter(Boolean)
+        : typeof trace.transitions_checked === 'string' && trace.transitions_checked.trim()
+          ? [trace.transitions_checked.trim()]
+          : [],
+    }))
+
   const assessmentText = typeof category.assessment === 'string' ? category.assessment : ''
-  const relatedFindings = Array.isArray(category.findings) ? category.findings.map((finding: any) => `${finding?.issue || ''} ${finding?.location || ''}`).join(' ') : ''
-  const evidenceText = `${assessmentText} ${relatedFindings}`
-  const namesGarmentDetail = /saree|sari|dhoti|uttariya|angavastram|vastra|drape|shawl|pallu|pleat|waistband|motif|border|hem|panel|fabric|textile|pattern|armor|armour|garment|attire|clothing|robe|tunic/i.test(evidenceText)
-  const explainsContinuity = /continu|trac|compar|match|mismatch|consistent|disrupt|change|break|verif|cannot|unable|too small|occlud|cropp|not visible/i.test(evidenceText)
-  const saysUnverifiable = /cannot|unable|too small|occlud|cropp|not visible|unverified|unclear|insufficient/i.test(evidenceText)
-  const hasFindings = Array.isArray(category.findings) && category.findings.length > 0
-  const passContradiction = category.status === 'pass' && (hasFindings || saysUnverifiable)
-  const missingTrace = missingCategory || !assessmentText.trim() || (category.status !== 'na' && !(namesGarmentDetail && explainsContinuity)) || passContradiction
-  if (missingTrace) {
-    if (!assessmentText.trim() || missingCategory || !(namesGarmentDetail && explainsContinuity)) {
-    category.assessment = 'No garment/textile trace was returned. Continuity is unverified; inspect the visible panels manually.'
+  const validResults = ['consistent', 'break', 'unverified']
+  const rawTraces = category.continuity_traces
+  const traces = rawTraces.filter((trace: any) =>
+    typeof trace?.garment_segment === 'string' && trace.garment_segment.trim() &&
+    typeof trace?.path === 'string' && trace.path.trim() &&
+    typeof trace?.observed_design === 'string' && trace.observed_design.trim() &&
+    Array.isArray(trace?.transitions_checked) && trace.transitions_checked.length > 0 &&
+    validResults.includes(trace?.result),
+  )
+  const reportedBreaks = rawTraces.filter((trace: any) => trace?.result === 'break')
+  const hasBreak = reportedBreaks.length > 0
+  const hasUnverifiedTrace = traces.some((trace: any) => trace.result === 'unverified')
+  const allPathsCovered = category.textile_path_coverage === 'all_visible_paths'
+  const hasTraceEvidence = traces.length > 0 && allPathsCovered
+  const hasVisibleClothing = category.status !== 'na'
+  const contradictoryPass = category.status === 'pass' && category.findings.length > 0
+  const needsTraceReview = missingCategory || (hasVisibleClothing && (!hasTraceEvidence || hasUnverifiedTrace || contradictoryPass))
+
+  if (hasBreak && !category.findings.some((finding: any) => /continu|border|motif|pattern|drape/i.test(`${finding?.issue || ''} ${finding?.location || ''}`))) {
+    const brokenTrace = reportedBreaks[0]
+    const segment = typeof brokenTrace.garment_segment === 'string' && brokenTrace.garment_segment.trim() ? brokenTrace.garment_segment : 'visible garment border'
+    const transitions = Array.isArray(brokenTrace.transitions_checked) ? brokenTrace.transitions_checked.filter(Boolean) : []
+    category.findings.push({
+      issue: `Visible textile design discontinuity along ${segment}.`,
+      evidence: brokenTrace.evidence || `${brokenTrace.observed_design || 'The traced motif/border changes'} Changes across the path: ${transitions.join('; ') || 'the model marked a broken transition'}.`,
+      location: brokenTrace.location || brokenTrace.path || segment,
+      severity: 'medium',
+      confidence: 0.72,
+      fix: 'Restore the same border width, motif sequence, scale, and edge trim across this connected drape path; preserve natural rotation from folds.',
+    })
+  }
+
+  if (needsTraceReview || hasBreak) {
+    if (hasBreak) {
+      category.assessment = `${assessmentText ? `${assessmentText} ` : ''}A traced connected textile path contains a visible design break; see the localized finding and path trace.`.trim()
+      if (category.status !== 'fail') category.status = 'warn'
+      category.score = Math.min(Number.isFinite(Number(category.score)) ? Number(category.score) : 100, 55)
+    } else if (hasVisibleClothing && needsTraceReview) {
+      category.assessment = 'The response did not provide complete per-path transition traces for all visible textile borders/drapes. Continuity is unverified; inspect each connected path across the waist, overlaps, and lower drape.'
+      if (!['warn', 'fail'].includes(category.status)) category.status = 'warn'
+      category.score = Math.min(Number.isFinite(Number(category.score)) ? Number(category.score) : 100, 55)
     }
-    if (!['warn', 'fail'].includes(category.status)) {
-      category.status = 'warn'
-      const categoryScore = Number(category.score)
-      category.score = Math.min(Number.isFinite(categoryScore) ? categoryScore : 100, 55)
-    }
+
     const overallScore = Number(report.overall_score)
-    report.overall_score = Math.min(Number.isFinite(overallScore) ? overallScore : 100, 75)
-    if (!/unverified|could not be verified|cannot be verified|unable to verify|not verified|incomplete/i.test(String(report.summary || ''))) {
-      report.summary = `Attire continuity is unverified because the response did not document a visible pattern trace. ${report.summary || ''}`.trim()
-    }
+    report.overall_score = Math.min(Number.isFinite(overallScore) ? overallScore : 100, hasBreak ? 70 : 75)
     if (!Array.isArray(report.priority_fixes)) report.priority_fixes = []
     if (!report.priority_fixes.some((fix: string) => /garment|attire|textile|saree|dhoti|drape|shawl|continuity/i.test(fix))) {
-      report.priority_fixes.unshift('Review the visible costume border/motif transitions; the model did not provide a verifiable continuity trace.')
+      report.priority_fixes.unshift(hasBreak
+        ? 'Correct the traced border/motif break so the connected drape uses one coherent design through the waist transition.'
+        : 'Complete a border-by-border textile trace; the response did not verify every visible connected drape path.')
       report.priority_fixes = report.priority_fixes.slice(0, 5)
     }
+    const summary = String(report.summary || '')
+    if (hasBreak && !/textile.{0,30}(break|discontinu|mismatch)|continuity defect/i.test(summary)) {
+      report.summary = `A visible textile design break was reported along a connected garment path. ${summary}`.trim()
+    } else if (needsTraceReview && !hasBreak && !/textile.{0,40}(unverified|not verified|incomplete)|continuity.{0,30}(unverified|not verified)/i.test(summary)) {
+      report.summary = `Textile continuity remains unverified because complete visible-path traces were not returned. ${summary}`.trim()
+    }
   }
-  if (!Array.isArray(category.findings)) category.findings = []
-  if (missingTrace && !category.findings.length) {
+
+  if (needsTraceReview && hasVisibleClothing && !category.findings.length) {
     category.findings.push({
-      issue: 'The response did not explain which costume panels, motifs, or borders were traced, so continuity is not confirmed.',
+      issue: 'Textile continuity was not verified path by path; a generic pattern summary is insufficient to confirm the visible border transitions.',
       severity: 'medium',
-      location: 'Visible costume, drape, or textile panels',
-      fix: 'Review the garment detail crop and rerun the continuity check if the pattern remains unclear.',
+      location: 'Visible garment borders and connected drape transitions',
+      evidence: 'The response omitted structured path coverage and one or more motif/border comparisons at visible transitions.',
+      confidence: 1,
+      fix: 'Inspect the magnified textile transition crop and compare border width, motif order/scale, and edge trim across each visible connection.',
     })
   }
   return report
