@@ -61,7 +61,7 @@ export function AnalyzePanel() {
     if (settings.provider !== 'gemini' || settings.endpoint !== PROVIDER_DEFAULTS.gemini.endpoint || settings.model !== PROVIDER_DEFAULTS.gemini.model) {
       setSettings({ provider: 'gemini', endpoint: PROVIDER_DEFAULTS.gemini.endpoint, model: PROVIDER_DEFAULTS.gemini.model })
     }
-    const inspectGarments = settings.checks.some((check) => /attire|drape|shawl|saree|garment|fabric|pattern/i.test(check))
+    const inspectGarments = settings.checks.some((check) => /attire|drape|shawl|saree|sari|dhoti|uttariya|angavastram|garment|fabric|textile|pattern|wardrobe|costume|clothing/i.test(check))
     setError(''); setRaw(''); setAnalyzing(true, inspectGarments ? 'Preparing full frame and fabric detail…' : 'Preprocessing image…')
     try {
       const { dataUrl } = await resizeImage(image, 2048, 0.94)

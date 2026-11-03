@@ -44,7 +44,7 @@ export const DEFAULT_CHECKS = [
   'Forehead tilak / bindi placement and completeness',
   'Earrings: left-right design, structure, scale & attachment',
   'Nose pin: presence, placement, scale & natural fit when applicable',
-  'Saree, drape & shawl design continuity (borders, motifs, pleats and transitions)',
+  'Attire & textile continuity (dhoti/saree drapes, shawls, borders, motifs and panel transitions)',
   'Crown / headpiece fit and natural attachment to the head',
   'Bangles, bracelets & rings: count, matching design, scale & fit',
   'Footwear match, construction & fit on both feet',

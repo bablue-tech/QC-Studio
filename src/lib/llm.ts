@@ -15,7 +15,7 @@ Return ONLY a complete valid JSON object (no markdown or prose) with this exact 
   "priority_fixes": string[],
   "extra_observations": string[]
 }
-QC checks (return one category for EACH check below, including na where genuinely inapplicable): ${checks.join('; ')}. Give every category a short assessment describing the visible evidence actually inspected, or the specific reason it could not be assessed. For the saree/drape/shawl category, this assessment must state which visible panels/transitions were traced and whether continuity was verified, a defect was found, or detail was too limited.
+QC checks (return one category for EACH check below, including na where genuinely inapplicable): ${checks.join('; ')}. Give every category a short assessment describing the visible evidence actually inspected, or the specific reason it could not be assessed. For the attire/textile category, state which visible garment panels/transitions were traced and whether continuity was verified, a defect was found, or detail was too limited.
 
 Detailed inspection rules:
 - VIEWPOINT / CROP FIRST: Identify the view as front, three-quarter, profile, rear/back, overhead, low-angle, close-up or a combination, and state what is cropped, occluded or too small to judge. Evaluate only surfaces visible in this frame. A close-up should receive a focused review of the details it actually shows; do not penalize a missing body part or accessory outside the crop. Mark inaccessible checks na and explicitly distinguish not visible from absent or defective. For partial visibility, give a cautious score and lower confidence rather than assuming a pass.
@@ -24,7 +24,7 @@ Detailed inspection rules:
 - TILAK / BINDI: if present, inspect whether the mark is complete, clean-edged, centered on the intended forehead position, correctly shaped, and not broken, doubled, blurred or floating. If absent, do not assume it is required; say absent only when relevant to the visible design.
 - EARRINGS / ORNAMENT SYMMETRY: compare the character's anatomical left and right sides (not simply image-left and image-right) for matching visible earrings and other paired ornaments: design, silhouette, structure, quantity, scale, orientation and natural attachment. In side or rear views, inspect the visible earring backs, fasteners and construction when resolvable. For rear views, compare any paired ornaments visible from behind. Explicitly say when a side or reverse surface is occluded or outside the crop; never call an unseen side mismatched.
 - NOSE PIN: when the visible character design calls for one, inspect presence, design, scale, position, side-to-side consistency where applicable, and whether it sits naturally on the nose. Do not infer gender or penalize absence without a visual design cue.
-- SAREE / DRAPE / SHAWL CONTINUITY (priority check): Do a deliberate pattern-trace instead of a general costume impression. First identify each visible fabric panel separately (saree body, pallu, pleats, blouse, shawl/scarf, border/hem). Trace each panel's visible border and at least one repeated motif path from its start to end, following it across folds and panel transitions. Compare motif identity, repeat spacing, scale, orientation, color, embroidery/weave density, border width, and edge alignment. Flag visible abrupt pattern swaps, missing or duplicated motifs, a broken or suddenly changing border, inconsistent motif scale, impossible print direction, blank patches, mismatched joins, or a shawl whose design changes between connected visible sections. Name the exact transition/location (for example shoulder-to-torso, pallu-to-pleats, waist fold, shawl edge, or hem) and give a concrete fix. Do not confuse a fold hiding part of a motif, perspective, shadow, natural overlap, or a true panel seam with a design defect. Use the full-frame image for construction and the accompanying focused crop (if present) to inspect fabric detail; both depict the same original image, not separate views or references. Mark pass only after tracing the visible pattern/border through the assessable sections. If clothing is visible but the motif is too soft, small, occluded, or cropped to trace, use warn and state exactly what could not be verified; use na only when the relevant clothing is not visible. A single view cannot prove continuity across unseen front/back surfaces.
+- ATTIRE / DRAPE / TEXTILE CONTINUITY (priority check for every character): Adapt the inspection to the garments actually shown; do not assume the character's gender, a required garment, or a historical costume feature. Relevant examples include a saree body/pallu/pleats, dhoti folds/waist panels/waistband/hem, angavastram or uttariya, shawl/scarf/sash, robe/tunic, and layered fabric beneath or beside armor. Identify the visible panels separately, then trace each border and at least one repeated motif path through its visible length and across panel transitions. Compare motif identity, repeat spacing, scale, orientation, color, embroidery/weave density, border width, and edge alignment. Check dhoti pleats and waist-to-hem flow where visible; check a draped upper cloth from shoulder across chest/back only along visible connected sections; inspect fabric-to-armor or garment-layer boundaries without expecting a printed pattern to continue through a rigid plate. Flag abrupt pattern swaps, missing/duplicated motifs, a broken or changing border, inconsistent motif scale, impossible print direction, blank patches, mismatched joins, or a design change between connected visible sections. Name the exact transition/location and give a concrete fix. Do not confuse folds, perspective, shadows, natural overlap, or a real seam/panel change with a defect. Use the full-frame image for construction and any accompanying focused crop for fabric detail; both depict the same original frame, not separate views or references. Mark pass only after tracing the visible design through assessable sections. If clothing is visible but detail is too soft, small, occluded, or cropped to trace, use warn and state what could not be verified; use na only when relevant clothing is not visible. A single view cannot prove continuity across unseen surfaces, and historic accuracy cannot be established without a supplied reference.
 - CROWN / HEADPIECE: check proportion, alignment, perspective, contact points, hair interaction and whether it appears naturally secured rather than floating, clipping or sinking. In a rear or side view, inspect the visible back/side structure and attachment points too.
 - BANGLES / BRACELETS / RINGS: compare visible wrists for count, design, material, size and spacing. Check rings on visible fingers for plausible scale, finger alignment and natural fit; note occlusion instead of assuming a mismatch.
 - FOOTWEAR: compare left and right shoes/sandals for design, construction, color, scale, orientation and attachment to the feet.
@@ -36,7 +36,7 @@ Give a concise, image-grounded 2-3 sentence summary that starts by naming the vi
 export async function analyzeImage(settings: Settings, imageDataUrls: string | string[], onToken?: (t: string) => void): Promise<string> {
   const reviewImages = Array.isArray(imageDataUrls) ? imageDataUrls : [imageDataUrls]
   const sys = SYSTEM_PROMPT(settings.checks)
-  const userText = 'First identify the character viewpoint and crop. Image 1 is the full frame. Any following image is a focused crop from that same frame, supplied to help inspect fabric; it is not a second view or a design reference. Perform angle-aware QC only on visible details, explicitly trace saree/drape/shawl pattern continuity, and return JSON only.'
+  const userText = 'First identify the character viewpoint and crop. Image 1 is the full frame. Any following image is a focused crop from that same frame, supplied to help inspect garment detail; it is not a second view or a design reference. Perform angle-aware QC only on visible details, explicitly trace visible attire/textile pattern continuity for the garments present, and return JSON only.'
 
   if (settings.provider === 'openai' || settings.provider === 'opencode' || settings.provider === 'openrouter' || settings.provider === 'custom') {
     const body: any = {
@@ -48,7 +48,7 @@ export async function analyzeImage(settings: Settings, imageDataUrls: string | s
         { role: 'user', content: [
           { type: 'text', text: userText },
           ...reviewImages.flatMap((url, index) => [
-            ...(index > 0 ? [{ type: 'text', text: `Image ${index + 1}: focused clothing crop from the same original frame.` }] : []),
+            ...(index > 0 ? [{ type: 'text', text: `Image ${index + 1}: focused garment and textile crop from the same original frame.` }] : []),
             { type: 'image_url', image_url: { url } },
           ]),
         ] },
@@ -110,7 +110,7 @@ export async function analyzeImage(settings: Settings, imageDataUrls: string | s
           ...reviewImages.flatMap((url, index) => {
             const { mediaType, base64 } = dataUrlToBase64(url)
             return [
-              ...(index > 0 ? [{ type: 'text', text: `Image ${index + 1}: focused clothing crop from the same original frame.` }] : []),
+              ...(index > 0 ? [{ type: 'text', text: `Image ${index + 1}: focused garment and textile crop from the same original frame.` }] : []),
               { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
             ]
           }),
@@ -153,7 +153,7 @@ export async function analyzeImage(settings: Settings, imageDataUrls: string | s
         ...reviewImages.flatMap((url, index) => {
           const { mediaType, base64 } = dataUrlToBase64(url)
           return [
-            ...(index > 0 ? [{ text: `Image ${index + 1}: focused clothing crop from the same original frame.` }] : []),
+            ...(index > 0 ? [{ text: `Image ${index + 1}: focused garment and textile crop from the same original frame.` }] : []),
             { inlineData: { mimeType: mediaType, data: base64 } },
           ]
         }),
@@ -217,18 +217,18 @@ export function parseReport(text: string, enabledChecks: string[] = []): any {
 }
 
 function ensureGarmentAssessment(report: any, enabledChecks: string[]): any {
-  const garmentCheckEnabled = enabledChecks.some(check => /attire|drape|shawl|saree|sari|garment|fabric|pattern/i.test(check))
+  const garmentCheckEnabled = enabledChecks.some(check => /attire|drape|shawl|saree|sari|dhoti|uttariya|angavastram|garment|fabric|textile|pattern|wardrobe|costume|clothing/i.test(check))
   if (!garmentCheckEnabled) return report
 
   if (!Array.isArray(report.categories)) report.categories = []
-  let category = report.categories.find((item: any) => /attire|drape|shawl|saree|sari|garment|fabric|costume/i.test(String(item?.name || '')))
+  let category = report.categories.find((item: any) => /attire|drape|shawl|saree|sari|dhoti|uttariya|angavastram|garment|fabric|textile|costume|clothing|wardrobe|vastra|armor|armour/i.test(String(item?.name || '')))
   const missingCategory = !category
   if (!category) {
     category = {
-      name: 'Saree, drape & shawl design continuity (borders, motifs, pleats and transitions)',
+      name: 'Attire & textile continuity (dhoti/saree drapes, shawls, borders, motifs and panel transitions)',
       status: 'warn',
       score: 45,
-      assessment: 'The model response omitted the required garment-continuity inspection, so the visible design cannot be verified from this result.',
+      assessment: 'The model response omitted the required attire and textile continuity inspection, so the visible design cannot be verified from this result.',
       findings: [],
     }
     report.categories.push(category)
@@ -237,7 +237,7 @@ function ensureGarmentAssessment(report: any, enabledChecks: string[]): any {
   const assessmentText = typeof category.assessment === 'string' ? category.assessment : ''
   const relatedFindings = Array.isArray(category.findings) ? category.findings.map((finding: any) => `${finding?.issue || ''} ${finding?.location || ''}`).join(' ') : ''
   const evidenceText = `${assessmentText} ${relatedFindings}`
-  const namesGarmentDetail = /saree|sari|drape|shawl|pallu|pleat|motif|border|hem|panel|fabric|pattern/i.test(evidenceText)
+  const namesGarmentDetail = /saree|sari|dhoti|uttariya|angavastram|vastra|drape|shawl|pallu|pleat|waistband|motif|border|hem|panel|fabric|textile|pattern|armor|armour|garment|attire|clothing|robe|tunic/i.test(evidenceText)
   const explainsContinuity = /continu|trac|compar|match|mismatch|consistent|disrupt|change|break|verif|cannot|unable|too small|occlud|cropp|not visible/i.test(evidenceText)
   const saysUnverifiable = /cannot|unable|too small|occlud|cropp|not visible|unverified|unclear|insufficient/i.test(evidenceText)
   const hasFindings = Array.isArray(category.findings) && category.findings.length > 0
@@ -245,7 +245,7 @@ function ensureGarmentAssessment(report: any, enabledChecks: string[]): any {
   const missingTrace = missingCategory || !assessmentText.trim() || (category.status !== 'na' && !(namesGarmentDetail && explainsContinuity)) || passContradiction
   if (missingTrace) {
     if (!assessmentText.trim() || missingCategory || !(namesGarmentDetail && explainsContinuity)) {
-      category.assessment = 'No garment-pattern trace was returned. Continuity is unverified; inspect the visible drape and shawl manually.'
+    category.assessment = 'No garment-pattern trace was returned. Continuity is unverified; inspect the visible attire and textile panels manually.'
     }
     if (!['warn', 'fail'].includes(category.status)) {
       category.status = 'warn'
@@ -255,20 +255,20 @@ function ensureGarmentAssessment(report: any, enabledChecks: string[]): any {
     const overallScore = Number(report.overall_score)
     report.overall_score = Math.min(Number.isFinite(overallScore) ? overallScore : 100, 75)
     if (!/unverified|could not be verified|cannot be verified|unable to verify|not verified|incomplete/i.test(String(report.summary || ''))) {
-      report.summary = `Garment continuity is unverified because the response did not document a visible pattern trace. ${report.summary || ''}`.trim()
+      report.summary = `Attire continuity is unverified because the response did not document a visible pattern trace. ${report.summary || ''}`.trim()
     }
     if (!Array.isArray(report.priority_fixes)) report.priority_fixes = []
-    if (!report.priority_fixes.some((fix: string) => /garment|saree|drape|shawl|continuity/i.test(fix))) {
-      report.priority_fixes.unshift('Review the saree and shawl border/motif transitions; the model did not provide a verifiable continuity trace.')
+    if (!report.priority_fixes.some((fix: string) => /garment|attire|textile|saree|dhoti|drape|shawl|continuity/i.test(fix))) {
+      report.priority_fixes.unshift('Review the visible attire border/motif transitions; the model did not provide a verifiable continuity trace.')
       report.priority_fixes = report.priority_fixes.slice(0, 3)
     }
   }
   if (!Array.isArray(category.findings)) category.findings = []
   if (missingTrace && !category.findings.length) {
     category.findings.push({
-      issue: 'The response did not explain which fabric panels, motifs, or borders were traced, so continuity is not confirmed.',
+      issue: 'The response did not explain which garment panels, motifs, or borders were traced, so continuity is not confirmed.',
       severity: 'medium',
-      location: 'Visible saree, drape, or shawl',
+      location: 'Visible attire, drape, or textile panels',
       fix: 'Review the garment detail crop and rerun the continuity check if the pattern remains unclear.',
     })
   }

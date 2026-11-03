@@ -21,8 +21,11 @@ const LEGACY_DEFAULT_CHECKS = [
   'Footwear match, construction & fit on both feet',
   'Body proportions, anatomy, pose & overall image finish',
 ]
-const PREVIOUS_ATTIRE_CHECK = 'Attire, drape, shawl & pattern continuity from top to bottom'
-const CURRENT_ATTIRE_CHECK = 'Saree, drape & shawl design continuity (borders, motifs, pleats and transitions)'
+const PREVIOUS_ATTIRE_CHECKS = [
+  'Attire, drape, shawl & pattern continuity from top to bottom',
+  'Saree, drape & shawl design continuity (borders, motifs, pleats and transitions)',
+]
+const CURRENT_ATTIRE_CHECK = 'Attire & textile continuity (dhoti/saree drapes, shawls, borders, motifs and panel transitions)'
 
 type State = {
   settings: Settings
@@ -70,7 +73,7 @@ const loadSettings = (): Settings => {
           const customChecks = parsed.checks.filter((check: string) => !LEGACY_DEFAULT_CHECKS.includes(check))
           parsed.checks = [...DEFAULT_CHECKS, ...customChecks]
         } else {
-          parsed.checks = parsed.checks.map((check: string) => check === PREVIOUS_ATTIRE_CHECK ? CURRENT_ATTIRE_CHECK : check)
+          parsed.checks = parsed.checks.map((check: string) => PREVIOUS_ATTIRE_CHECKS.includes(check) ? CURRENT_ATTIRE_CHECK : check)
         }
       }
       try { localStorage.setItem('qc_settings', JSON.stringify(parsed)) } catch {}
