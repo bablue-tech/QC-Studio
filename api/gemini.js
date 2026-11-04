@@ -9,7 +9,16 @@ module.exports = (req, res) => {
     return
   }
 
-  const targetPath = (req.url || '/').replace(/^\/api\/gemini/, '')
+  const routePath = req.query?.path
+  const pathParts = Array.isArray(routePath) ? routePath : [routePath]
+  const targetPath = `/${pathParts.filter(Boolean).join('/')}`
+  if (targetPath === '/' || targetPath.includes('..')) {
+    res.statusCode = 400
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify({ error: 'A valid Gemini API path is required.' }))
+    return
+  }
+
   const headers = {
     'x-goog-api-key': apiKey,
     'content-type': req.headers['content-type'] || 'application/json',

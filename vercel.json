@@ -1,8 +1,14 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/api/gemini/:path*",
+      "destination": "/api/gemini?path=:path*"
+    }
+  ],
   "functions": {
-    "api/gemini/[...path].js": {
+    "api/gemini.js": {
       "maxDuration": 60
     }
   }
