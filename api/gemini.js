@@ -1,53 +1,45 @@
-const https = require('https')
+export default {
+  async fetch(request) {
+    const apiKey = process.env.GEMINI_API_KEY
+    if (!apiKey) {
+      return Response.json({ error: 'Gemini is not configured. Set GEMINI_API_KEY on the server.' }, { status: 503 })
+    }
 
-module.exports = (req, res) => {
-  const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
-    res.statusCode = 503
-    res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify({ error: 'Gemini is not configured. Set GEMINI_API_KEY on the server.' }))
-    return
-  }
+    const incomingUrl = new URL(request.url)
+    const routePath = incomingUrl.searchParams.get('path') || ''
+    const targetPath = `/${routePath.replace(/^\/+/, '')}`
+    if (!/^\/v1beta\/models\/[A-Za-z0-9._-]+:generateContent$/.test(targetPath)) {
+      return Response.json({ error: 'A valid Gemini generateContent path is required.' }, { status: 400 })
+    }
 
-  const routePath = req.query?.path
-  const pathParts = Array.isArray(routePath) ? routePath : [routePath]
-  const targetPath = `/${pathParts.filter(Boolean).join('/')}`
-  if (targetPath === '/' || targetPath.includes('..')) {
-    res.statusCode = 400
-    res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify({ error: 'A valid Gemini API path is required.' }))
-    return
-  }
+    const upstreamUrl = new URL(targetPath, 'https://generativelanguage.googleapis.com')
+    for (const [key, value] of incomingUrl.searchParams) {
+      if (key !== 'path') upstreamUrl.searchParams.append(key, value)
+    }
 
-  const headers = {
-    'x-goog-api-key': apiKey,
-    'content-type': req.headers['content-type'] || 'application/json',
-  }
-  if (req.headers['content-length']) headers['content-length'] = req.headers['content-length']
+    try {
+      const hasBody = request.method !== 'GET' && request.method !== 'HEAD'
+      const upstreamResponse = await fetch(upstreamUrl, {
+        method: request.method,
+        headers: {
+          'x-goog-api-key': apiKey,
+          'content-type': request.headers.get('content-type') || 'application/json',
+        },
+        body: hasBody ? request.body : undefined,
+        ...(hasBody ? { duplex: 'half' } : {}),
+        cache: 'no-store',
+        redirect: 'manual',
+      })
 
-  const upstream = https.request({
-    hostname: 'generativelanguage.googleapis.com',
-    port: 443,
-    path: targetPath,
-    method: req.method,
-    headers,
-  }, (upstreamResponse) => {
-    res.statusCode = upstreamResponse.statusCode || 502
-    res.setHeader('Content-Type', upstreamResponse.headers['content-type'] || 'application/json')
-    res.setHeader('Cache-Control', 'no-store')
-    upstreamResponse.pipe(res)
-  })
-
-  upstream.on('error', () => {
-    if (res.headersSent) return res.end()
-    res.statusCode = 502
-    res.setHeader('Content-Type', 'application/json')
-    res.end(JSON.stringify({ error: 'Gemini proxy error. Please retry the analysis.' }))
-  })
-
-  req.pipe(upstream)
-}
-
-module.exports.config = {
-  api: { bodyParser: false },
+      return new Response(upstreamResponse.body, {
+        status: upstreamResponse.status,
+        headers: {
+          'content-type': upstreamResponse.headers.get('content-type') || 'application/json',
+          'cache-control': 'no-store',
+        },
+      })
+    } catch {
+      return Response.json({ error: 'Gemini proxy error. Please retry the analysis.' }, { status: 502 })
+    }
+  },
 }
