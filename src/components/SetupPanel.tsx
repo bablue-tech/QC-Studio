@@ -39,13 +39,13 @@ export function SetupPanel() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{
               width: 48, height: 48,
-              background: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.15))',
-              border: '1px solid rgba(59,130,246,0.35)',
+              background: 'var(--tint-amber-bg)',
+              border: '1px solid var(--tint-amber-ring)',
               borderRadius: 14,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 24px rgba(59,130,246,0.2)',
+              boxShadow: 'none',
             }}>
-              <Brain size={22} color="var(--azure)" />
+              <Brain size={22} color="var(--tint-amber-fg)" />
             </div>
             <div>
               <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700, color: 'var(--text-bright)', marginBottom: 3 }}>
@@ -63,7 +63,7 @@ export function SetupPanel() {
               padding: '7px 14px',
               borderRadius: 20,
               background: 'var(--emerald-dim)',
-              border: '1px solid rgba(16,185,129,0.22)',
+              border: '1px solid var(--tint-emerald-ring)',
               fontFamily: 'var(--font-mono)',
               fontSize: 10.5,
               color: 'var(--emerald)',
@@ -80,11 +80,11 @@ export function SetupPanel() {
               display: 'flex', alignItems: 'center', gap: 7,
               padding: '7px 14px',
               borderRadius: 20,
-              background: 'rgba(59,130,246,0.08)',
-              border: '1px solid rgba(59,130,246,0.2)',
+              background: 'var(--tint-sky-bg)',
+              border: '1px solid var(--tint-sky-ring)',
               fontFamily: 'var(--font-mono)',
               fontSize: 10.5,
-              color: 'var(--azure)',
+              color: 'var(--tint-sky-fg)',
             }}>
               <ShieldCheck size={11} />
               PRE-CONFIGURED
@@ -96,8 +96,8 @@ export function SetupPanel() {
           marginTop: 16,
           padding: '14px 16px',
           borderRadius: 10,
-          background: 'rgba(16,185,129,0.04)',
-          border: '1px solid rgba(16,185,129,0.12)',
+          background: 'var(--tint-emerald-bg)',
+          border: '1px solid var(--tint-emerald-ring)',
           display: 'flex', alignItems: 'center', gap: 10,
           fontSize: 12.5,
           color: 'var(--text-soft)',
@@ -234,7 +234,7 @@ export function SetupPanel() {
         <div style={{
           marginTop: 16, padding: '12px 14px',
           borderRadius: 8,
-          background: 'rgba(59,130,246,0.04)',
+          background: 'var(--bg-deep)',
           border: '1px solid var(--border-subtle)',
           fontSize: 12, color: 'var(--text-muted)',
           fontFamily: 'var(--font-mono)',

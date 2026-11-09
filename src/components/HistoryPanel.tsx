@@ -60,7 +60,7 @@ export function HistoryPanel() {
                   <div style={{
                     position: 'absolute', bottom: 0, left: 0, right: 0,
                     padding: '6px 8px',
-                    background: 'linear-gradient(to top, rgba(2,8,20,0.95), transparent)',
+                    background: 'linear-gradient(to top, var(--overlay-image), transparent)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <span style={{

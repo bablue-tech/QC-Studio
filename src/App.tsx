@@ -1,4 +1,5 @@
-import { ShieldCheck, ScanLine, FileText, History, Settings, Brain, Zap, AlertCircle, Activity } from 'lucide-react'
+import { useState } from 'react'
+import { ScanLine, FileText, History, Settings, Brain, Zap, AlertCircle, Activity, Sun, Moon } from 'lucide-react'
 import { useStore } from './lib/store'
 import { SetupPanel } from './components/SetupPanel'
 import { AnalyzePanel } from './components/AnalyzePanel'
@@ -20,6 +21,13 @@ export default function App() {
   const report    = useStore((s) => s.report)
   const history   = useStore((s) => s.history)
   const isAnalyzing = useStore((s) => s.isAnalyzing)
+  const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
+  const toggleTheme = () => {
+    const next = !dark
+    document.documentElement.classList.toggle('dark', next)
+    try { localStorage.setItem('theme', next ? 'dark' : 'light') } catch { /* storage unavailable */ }
+    setDark(next)
+  }
 
   return (
     <>
@@ -29,8 +37,8 @@ export default function App() {
         <div className="network-glow network-glow-two" />
         <svg className="network-canvas" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
           <defs>
-            <radialGradient id="nodeCore"><stop stopColor="#fff2d1" /><stop offset=".28" stopColor="#ff9872" /><stop offset="1" stopColor="#f27650" stopOpacity="0" /></radialGradient>
-            <linearGradient id="linkWarm" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#f27650" stopOpacity="0" /><stop offset=".48" stopColor="#f27650" stopOpacity=".5" /><stop offset="1" stopColor="#d9df83" stopOpacity=".12" /></linearGradient>
+            <radialGradient id="nodeCore"><stop style={{ stopColor: 'var(--net-core-1)' }} /><stop offset=".28" style={{ stopColor: 'var(--net-core-2)' }} /><stop offset="1" style={{ stopColor: 'var(--net-core-3)' }} stopOpacity="0" /></radialGradient>
+            <linearGradient id="linkWarm" x1="0" y1="0" x2="1" y2="1"><stop style={{ stopColor: 'var(--net-link-1)' }} stopOpacity="0" /><stop offset=".48" style={{ stopColor: 'var(--net-link-1)' }} stopOpacity=".5" /><stop offset="1" style={{ stopColor: 'var(--net-link-2)' }} stopOpacity=".12" /></linearGradient>
           </defs>
           <g className="network-links">
             <path d="M-20 200 112 142 235 210 338 115 470 170 570 92 710 158 832 92 960 165 1088 96 1225 166 1455 82" />
@@ -48,7 +56,7 @@ export default function App() {
           <g className="network-packets">
             <circle r="4" fill="url(#nodeCore)"><animateMotion dur="16s" repeatCount="indefinite" path="M-20 200 112 142 235 210 338 115 470 170 570 92 710 158 832 92 960 165 1088 96 1225 166 1455 82" /></circle>
             <circle r="3.5" fill="url(#nodeCore)"><animateMotion dur="21s" begin="-8s" repeatCount="indefinite" path="M90 330 42 515 190 590 285 370 430 470 590 340 640 520 780 330 900 510 1010 360 1160 480 1300 680" /></circle>
-            <circle r="3" fill="#d9df83"><animateMotion dur="18s" begin="-5s" repeatCount="indefinite" path="M160 730 310 870 510 700 650 860 760 740 920 865 1020 710 1175 860" /></circle>
+            <circle r="3" style={{ fill: 'var(--net-packet)' }}><animateMotion dur="18s" begin="-5s" repeatCount="indefinite" path="M160 730 310 870 510 700 650 860 760 740 920 865 1020 710 1175 860" /></circle>
           </g>
         </svg>
         <div className="network-vignette" />
@@ -59,7 +67,7 @@ export default function App() {
         <header className="app-header">
           <div className="app-logo">
             <div className="logo-icon">
-              <ShieldCheck size={18} color="#60a5fa" strokeWidth={2.2} />
+              <img src="/g5-mark.webp" alt="" />
             </div>
             <span className="logo-name">FrameProof</span>
             <span className="logo-badge">QC STUDIO</span>
@@ -74,6 +82,15 @@ export default function App() {
               <div className="pulse-dot" />
               <span>{isAnalyzing ? 'ANALYSIS IN PROGRESS' : 'READY FOR REVIEW'}</span>
             </div>
+            <button
+              type="button"
+              className="theme-toggle"
+              onClick={toggleTheme}
+              aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={dark ? 'Light mode' : 'Dark mode'}
+            >
+              {dark ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
           </div>
         </header>
 
@@ -107,7 +124,7 @@ export default function App() {
           <div className="nav-spacer" />
           <div className="nav-ai-indicator">
             <Activity size={10} color="var(--electric)" />
-            <Zap size={10} color="var(--violet)" />
+            <Zap size={10} color="var(--azure)" />
             <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', letterSpacing: 1 }}>
               AI · VISION · QC
             </span>
