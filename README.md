@@ -2,6 +2,8 @@
 
 FrameProof is a visual quality-control workspace for reviewing character and product imagery. Upload an image, run a structured vision review, and export or revisit the resulting report.
 
+The interface uses the G5 AI Studio design system from aistudio.galleri5.com. It opens in the dark gold theme (near-black, gold accent, Archivo/Inter), and the header toggle switches to the light G5 theme (neutral tokens, Inter/Geist, amber accent). Both themes are the final layers in `src/index.css`; the dark one is scoped to `html.dark`.
+
 For a non-technical flowsheet and backend overview, see [docs/architecture-overview.md](docs/architecture-overview.md).
 For the step-by-step process, technology purposes, and source-code percentage breakdown, see [docs/process-and-technology-guide.md](docs/process-and-technology-guide.md).
 For a free online deployment walkthrough, see [docs/free-hosting-guide.md](docs/free-hosting-guide.md). The repository's [`render.yaml`](render.yaml) configures the Render web service and prompts for the Gemini key as a secret during setup.

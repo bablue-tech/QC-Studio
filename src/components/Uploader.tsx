@@ -78,9 +78,9 @@ export function Uploader() {
         <div style={{
           marginTop: 12, display: 'flex', alignItems: 'center', gap: 8,
           padding: '10px 14px', borderRadius: 10,
-          background: 'rgba(244,63,66,0.06)',
-          border: '1px solid rgba(244,63,66,0.2)',
-          color: '#fb7173', fontSize: 13,
+          background: 'var(--tint-red-bg)',
+          border: '1px solid var(--tint-red-ring)',
+          color: 'var(--tint-red-fg)', fontSize: 13,
           fontFamily: 'var(--font-mono)',
         }}>
           <AlertCircle size={14} />

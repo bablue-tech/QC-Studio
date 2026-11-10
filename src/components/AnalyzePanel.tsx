@@ -12,29 +12,29 @@ const PIPELINE_NODES = [
     icon: '⬡',
     label: 'Preprocess',
     desc: 'Full frame + fabric detail when available',
-    color: 'rgba(242,193,80,0.15)',
-    border: 'rgba(242,193,80,0.3)',
+    color: 'var(--tint-amber-bg)',
+    border: 'var(--tint-amber-ring)',
   },
   {
     icon: '◈',
     label: 'Neural Vision',
     desc: 'Multimodal AI image analysis',
-    color: 'rgba(241,203,113,0.11)',
-    border: 'rgba(241,203,113,0.28)',
+    color: 'var(--tint-sky-bg)',
+    border: 'var(--tint-sky-ring)',
   },
   {
     icon: '◎',
     label: 'QC Report',
     desc: 'Structured JSON scoring',
-    color: 'rgba(240,197,98,0.12)',
-    border: 'rgba(240,197,98,0.3)',
+    color: 'var(--tint-orange-bg)',
+    border: 'var(--tint-orange-ring)',
   },
   {
     icon: '⟁',
     label: 'Transient Review',
     desc: 'Images sent for model analysis',
-    color: 'rgba(40,161,84,0.12)',
-    border: 'rgba(40,161,84,0.3)',
+    color: 'var(--tint-emerald-bg)',
+    border: 'var(--tint-emerald-ring)',
   },
 ]
 
@@ -204,9 +204,9 @@ export function AnalyzePanel() {
                 style={{
                   marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
                   padding: '4px 12px', borderRadius: 7,
-                  background: 'rgba(244,63,66,0.06)',
-                  border: '1px solid rgba(244,63,66,0.2)',
-                  color: '#fb7173', cursor: 'pointer', fontSize: 11,
+                  background: 'var(--tint-red-bg)',
+                  border: '1px solid var(--tint-red-ring)',
+                  color: 'var(--tint-red-fg)', cursor: 'pointer', fontSize: 11,
                   fontFamily: 'var(--font-mono)',
                   transition: 'all 0.2s',
                 }}
@@ -286,9 +286,9 @@ export function AnalyzePanel() {
                   }}>
                     <div style={{
                       width: 6, height: 6, borderRadius: '50%',
-                      background: 'linear-gradient(135deg, var(--electric), var(--violet))',
+                      background: 'var(--electric)',
                       flexShrink: 0,
-                      boxShadow: '0 0 6px rgba(246,190,59,0.5)',
+                      boxShadow: 'none',
                     }} />
                     {c}
                   </div>
