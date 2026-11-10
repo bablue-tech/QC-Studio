@@ -12,4 +12,4 @@ For a free online deployment walkthrough, see [docs/free-hosting-guide.md](docs/
 2. Run `npm install` and `npm run dev` for the Vite development server.
 3. For the production server, run `npm run build` and then `npm start`. Set `GEMINI_API_KEY` in the server environment.
 
-The app uses Gemini 3.5 Flash-Lite for free-tier image analysis. The Gemini credential is added by the server proxy and is not stored in browser storage or bundled into the frontend. `.env.local` is ignored by Git.
+The app uses Gemini 3.1 Flash-Lite for image analysis and Fix All Flags, and automatically falls back to Gemini 3 Flash Preview and Gemini 3.5 Flash-Lite when the main model is overloaded. The Gemini credential is added by the server proxy and is not stored in browser storage or bundled into the frontend. `.env.local` is ignored by Git.

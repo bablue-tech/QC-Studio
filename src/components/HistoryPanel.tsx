@@ -60,7 +60,7 @@ export function HistoryPanel() {
                   <div style={{
                     position: 'absolute', bottom: 0, left: 0, right: 0,
                     padding: '6px 8px',
-                    background: 'linear-gradient(to top, rgba(2,8,20,0.95), transparent)',
+                    background: 'linear-gradient(to top, rgba(9,9,9,0.95), transparent)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
                     <span style={{
@@ -103,7 +103,7 @@ export function HistoryPanel() {
                     <button
                       className="btn-secondary"
                       style={{ fontSize: 11, padding: '5px 10px', gap: 4 }}
-                      onClick={() => { setReport(h.report); setTab('report') }}
+                      onClick={() => { setReport(h.report, h.thumbnail || null); setTab('report') }}
                     >
                       <ExternalLink size={10} /> Open
                     </button>

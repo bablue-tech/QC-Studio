@@ -1,5 +1,6 @@
 import { useStore } from '../lib/store'
 import { saveAs } from 'file-saver'
+import { FixAllFlags } from './FixAllFlags'
 import {
   Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, CheckCircle2, CircleHelp,
   Download, FileText, ShieldAlert, Sparkles, Target, Trophy, XCircle,
@@ -71,6 +72,7 @@ function StatusPill({ status }: { status: string }) {
 export function ReportPanel() {
   const report = useStore((s) => s.report)
   const imageName = useStore((s) => s.imageName)
+  const reportImage = useStore((s) => s.reportImage)
 
   if (!report) return (
     <div className="empty-state">
@@ -114,7 +116,13 @@ export function ReportPanel() {
   return (
     <div className="report-visualizer">
       <header className="report-heading">
-        <div>
+        {reportImage && (
+          <figure className="report-frame">
+            <img src={reportImage} alt="Analyzed frame" />
+            <figcaption>ANALYZED FRAME</figcaption>
+          </figure>
+        )}
+        <div className="report-heading-copy">
           <div className="report-kicker"><span className="kicker-orbit"><Sparkles size={13} /></span> CHARACTER QUALITY INTELLIGENCE</div>
           <h1>{imageName || 'Visual QC report'}</h1>
           <p>{report.summary}</p>
@@ -178,8 +186,10 @@ export function ReportPanel() {
         </section>
       )}
 
+      <FixAllFlags report={report} />
+
       <section className="category-section">
-        <div className="category-section-head"><div><span className="feature-index">04 / DETAIL SCAN</span><h2>Craft &amp; consistency</h2><p>Open a signal to inspect the visual evidence and suggested fix.</p></div><span className="scan-stamp"><Activity size={12} /> {categories.length} VISUAL SIGNALS</span></div>
+        <div className="category-section-head"><div><span className="feature-index">05 / DETAIL SCAN</span><h2>Craft &amp; consistency</h2><p>Open a signal to inspect the visual evidence and suggested fix.</p></div><span className="scan-stamp"><Activity size={12} /> {categories.length} VISUAL SIGNALS</span></div>
         <div className="visual-category-list">
           {categories.map((category: any, i: number) => {
             const value = Math.max(0, Math.min(100, Number(category.score) || 0))

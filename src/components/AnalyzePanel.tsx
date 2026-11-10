@@ -12,29 +12,29 @@ const PIPELINE_NODES = [
     icon: '⬡',
     label: 'Preprocess',
     desc: 'Full frame + fabric detail when available',
-    color: 'rgba(242,118,80,0.15)',
-    border: 'rgba(242,118,80,0.3)',
+    color: 'rgba(242,193,80,0.15)',
+    border: 'rgba(242,193,80,0.3)',
   },
   {
     icon: '◈',
     label: 'Neural Vision',
     desc: 'Multimodal AI image analysis',
-    color: 'rgba(217,223,131,0.11)',
-    border: 'rgba(217,223,131,0.28)',
+    color: 'rgba(241,203,113,0.11)',
+    border: 'rgba(241,203,113,0.28)',
   },
   {
     icon: '◎',
     label: 'QC Report',
     desc: 'Structured JSON scoring',
-    color: 'rgba(233,191,105,0.12)',
-    border: 'rgba(233,191,105,0.3)',
+    color: 'rgba(240,197,98,0.12)',
+    border: 'rgba(240,197,98,0.3)',
   },
   {
     icon: '⟁',
     label: 'Transient Review',
     desc: 'Images sent for model analysis',
-    color: 'rgba(16,185,129,0.12)',
-    border: 'rgba(16,185,129,0.3)',
+    color: 'rgba(40,161,84,0.12)',
+    border: 'rgba(40,161,84,0.3)',
   },
 ]
 
@@ -93,7 +93,7 @@ export function AnalyzePanel() {
       const report = parseReport(text, settings.checks, referenceFrames.length > 0)
       report.raw = text
       report.source_reference_names = referenceFrames.map((frame) => frame.name)
-      setReport(report)
+      setReport(report, dataUrl)
       addHistory({
         id: 'run_' + Date.now(),
         createdAt: Date.now(),
@@ -168,8 +168,8 @@ export function AnalyzePanel() {
             <div className="card card-glow" style={{ padding: 14, position: 'relative' }}>
               <img
                 src={imageUrl!}
-                alt="preview"
-                style={{ width: '100%', borderRadius: 10, display: 'block', maxHeight: 520, objectFit: 'contain' }}
+                alt={`Preview of ${imageName}`}
+                className="analyze-preview-img"
               />
               {/* Corner brackets */}
               <div className="corner-bracket tl" />
@@ -204,9 +204,9 @@ export function AnalyzePanel() {
                 style={{
                   marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5,
                   padding: '4px 12px', borderRadius: 7,
-                  background: 'rgba(244,63,94,0.06)',
-                  border: '1px solid rgba(244,63,94,0.2)',
-                  color: '#fb7185', cursor: 'pointer', fontSize: 11,
+                  background: 'rgba(244,63,66,0.06)',
+                  border: '1px solid rgba(244,63,66,0.2)',
+                  color: '#fb7173', cursor: 'pointer', fontSize: 11,
                   fontFamily: 'var(--font-mono)',
                   transition: 'all 0.2s',
                 }}
@@ -288,7 +288,7 @@ export function AnalyzePanel() {
                       width: 6, height: 6, borderRadius: '50%',
                       background: 'linear-gradient(135deg, var(--electric), var(--violet))',
                       flexShrink: 0,
-                      boxShadow: '0 0 6px rgba(59,130,246,0.5)',
+                      boxShadow: '0 0 6px rgba(246,190,59,0.5)',
                     }} />
                     {c}
                   </div>

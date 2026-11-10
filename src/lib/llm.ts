@@ -1,8 +1,30 @@
-import { QC_CHECK_DETAILS } from './types'
+import { GEMINI_FALLBACK_MODELS, QC_CHECK_DETAILS } from './types'
 import type { Settings } from './types'
 import { dataUrlToBase64 } from './image'
 
 export type LLMResult = { text: string }
+
+// Overload (503/500) and per-model rate limits (429) are worth retrying on another model.
+const isBusy = (status: number) => status === 429 || status >= 500
+
+/**
+ * Posts a Gemini generateContent request, switching to the fallback models when the
+ * requested model is busy. Other errors (bad request, auth) are returned unchanged.
+ */
+async function fetchGemini(endpoint: string, model: string, body: string): Promise<Response> {
+  const models = [model, ...GEMINI_FALLBACK_MODELS.filter((candidate) => candidate !== model)]
+  let res: Response | null = null
+  for (const candidate of models) {
+    res = await fetch(`${endpoint}/models/${candidate}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    })
+    // A 503 from our own proxy means the server key is missing; another model will not help.
+    if (!isBusy(res.status) || (res.status === 503 && (await res.clone().text()).includes('not configured'))) return res
+  }
+  return res!
+}
 export type ReviewImageInput = { dataUrl: string; role: 'target' | 'garment-detail' | 'reference'; label?: string }
 
 const imageLabel = (image: ReviewImageInput, index: number, referenceIndex: number) => {
@@ -180,7 +202,6 @@ const userText = `First identify the target shot's viewpoint, shot type, and cro
   }
 
   if (settings.provider === 'gemini') {
-    const url = `${settings.endpoint}/models/${settings.model}:generateContent`
     const body = (maxOutputTokens: number) => ({
       systemInstruction: { parts: [{ text: sys }] },
       contents: [{ role: 'user', parts: [
@@ -196,11 +217,7 @@ const userText = `First identify the target shot's viewpoint, shot type, and cro
       generationConfig: { temperature: settings.temperature, maxOutputTokens, responseMimeType: 'application/json' },
     })
     try {
-      const request = (maxOutputTokens: number) => fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body(maxOutputTokens)),
-      })
+      const request = (maxOutputTokens: number) => fetchGemini(settings.endpoint, settings.model, JSON.stringify(body(maxOutputTokens)))
       const initialMaxOutputTokens = Math.max(settings.maxTokens, 4000)
       let res = await request(initialMaxOutputTokens)
       let data = res.ok ? await res.json() : null
@@ -212,6 +229,7 @@ const userText = `First identify the target shot's viewpoint, shot type, and cro
         const body = await res.text()
         if (res.status === 429) throw new Error('Rate limited by the AI service. Please wait a moment and try again.')
         if (res.status === 401) throw new Error('Invalid API key. Check your settings.')
+        if (res.status >= 500) throw new Error('All Gemini models are busy right now (high demand). Your image is kept — please retry in a minute.')
         throw new Error(`Gemini error ${res.status}: ${body}`)
       }
       const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') ?? ''
@@ -529,4 +547,58 @@ function ensureSummary(report: any): any {
   }
 
   throw new Error('The model returned a report without a summary or QC findings. Please retry the image review.')
+}
+
+/**
+ * Fix All Flags: sends the original analyzed frame (as inline image data) plus the
+ * structured QC flags to Gemini through the same server proxy used for analysis.
+ * Returns the raw model text; callers validate it with parseRepairResponse.
+ */
+export async function generateRepairPrompt(
+  settings: Pick<Settings, 'endpoint' | 'model'>,
+  imageDataUrl: string,
+  systemPrompt: string,
+  userText: string,
+): Promise<string> {
+  const { mediaType, base64 } = dataUrlToBase64(imageDataUrl)
+  const request = (maxOutputTokens: number) => fetchGemini(settings.endpoint, settings.model, JSON.stringify({
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: 'user', parts: [
+        { text: 'Image 1: ORIGINAL frame to be edited (the same frame the QC flags refer to).' },
+        { inlineData: { mimeType: mediaType, data: base64 } },
+        { text: userText },
+      ] }],
+      generationConfig: { temperature: 0.35, maxOutputTokens, responseMimeType: 'application/json' },
+  }))
+
+  try {
+    let res = await request(4000)
+    let data = res.ok ? await res.json() : null
+    if (res.ok && data?.candidates?.[0]?.finishReason === 'MAX_TOKENS') {
+      res = await request(8000)
+      data = res.ok ? await res.json() : null
+    }
+    if (!res.ok) {
+      const body = await res.text()
+      if (res.status === 429) throw new Error('Rate limited by the AI service. Please wait a moment and try again.')
+      if (res.status === 401 || res.status === 403) throw new Error('The AI service rejected the request. Check the server Gemini key.')
+      if (res.status === 503 && body.includes('not configured')) throw new Error('Gemini is not configured on the server. Set GEMINI_API_KEY.')
+      if (res.status >= 500) throw new Error('All Gemini models are busy right now (high demand). Your image and report are kept — please retry in a minute.')
+      throw new Error(`Gemini error ${res.status}. Please try again.`)
+    }
+    const candidate = data?.candidates?.[0]
+    const text = candidate?.content?.parts?.map((p: any) => p?.text ?? '').join('') ?? ''
+    if (!text.trim()) {
+      if (candidate?.finishReason === 'SAFETY' || data?.promptFeedback?.blockReason) {
+        throw new Error('Gemini declined to write a prompt for this image. Try regenerating or edit the flags manually.')
+      }
+      throw new Error(candidate?.finishReason === 'MAX_TOKENS'
+        ? 'The repair prompt was too long to finish. Please regenerate.'
+        : 'Gemini returned an empty repair prompt. Please try again.')
+    }
+    return text
+  } catch (e) {
+    if (e instanceof TypeError) throw new Error('Could not reach the AI service. Check your connection and try again.')
+    throw e
+  }
 }

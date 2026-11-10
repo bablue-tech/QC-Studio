@@ -120,12 +120,50 @@ export const QC_CHECK_DETAILS: Record<string, string> = {
   'Reference-frame character / costume continuity (when references are supplied)': 'Compare identity cues, costume construction, motifs, ornaments, props and palette against supplied references while allowing intentional pose, camera, lighting and view changes. Without references, report not applicable.',
 }
 
+/** Tried in order when the main Gemini model is overloaded or rate limited. */
+export const GEMINI_FALLBACK_MODELS = ['gemini-3-flash-preview', 'gemini-3.5-flash-lite']
+
 export const PROVIDER_DEFAULTS: Record<Provider, { endpoint: string; model: string }> = {
   openai: { endpoint: 'https://api.openai.com/v1/chat/completions', model: 'gpt-4o' },
   anthropic: { endpoint: 'https://api.anthropic.com/v1/messages', model: 'claude-sonnet-4-5' },
-  gemini: { endpoint: '/api/gemini/v1beta', model: 'gemini-3.5-flash-lite' },
+  // gemini-3.1-flash-lite was the most reliable and fastest image model in live tests (Nov 2026).
+  gemini: { endpoint: '/api/gemini/v1beta', model: 'gemini-3.1-flash-lite' },
   opencode: { endpoint: '/api/opencode/v1/chat/completions', model: 'mimo-v2.6-flash-free' },
   // OpenRouter routes to a free model that supports the request's image input.
   openrouter: { endpoint: '/api/openrouter/api/v1/chat/completions', model: 'openrouter/free' },
   custom: { endpoint: '', model: '' },
+}
+
+/** One QC finding normalized for the Fix All Flags repair prompt. */
+export type RepairFlag = {
+  id: string
+  category: string
+  domain?: string
+  issue: string
+  severity: Finding['severity']
+  location?: string
+  evidence?: string
+  fix?: string
+  confidence?: number
+  /** Low confidence or no usable fix: the prompt must stay conservative here. */
+  ambiguous: boolean
+  source: 'finding' | 'textile-trace'
+}
+
+export type RepairStage = 'collect' | 'image' | 'generate' | 'validate'
+
+export type RepairResult = {
+  prompt: string
+  flags: RepairFlag[]
+  addressedIds: string[]
+  ambiguities: string[]
+  conflicts: string[]
+  createdAt: number
+}
+
+export type RepairState = {
+  status: 'idle' | 'running' | 'ready' | 'error'
+  stage: RepairStage | null
+  result: RepairResult | null
+  error: string
 }

@@ -39,11 +39,11 @@ export function SetupPanel() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div style={{
               width: 48, height: 48,
-              background: 'linear-gradient(135deg, rgba(59,130,246,0.2), rgba(139,92,246,0.15))',
-              border: '1px solid rgba(59,130,246,0.35)',
+              background: 'linear-gradient(135deg, rgba(246,190,59,0.2), rgba(246,200,92,0.15))',
+              border: '1px solid rgba(246,190,59,0.35)',
               borderRadius: 14,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 24px rgba(59,130,246,0.2)',
+              boxShadow: '0 0 24px rgba(246,190,59,0.2)',
             }}>
               <Brain size={22} color="var(--azure)" />
             </div>
@@ -52,7 +52,7 @@ export function SetupPanel() {
                 Neural Vision Engine
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)' }}>
-                Gemini 3.5 Flash-Lite · Free-tier vision · Server-side key
+                Gemini 3.1 Flash-Lite · Auto-fallback when busy · Server-side key
               </div>
             </div>
           </div>
@@ -63,7 +63,7 @@ export function SetupPanel() {
               padding: '7px 14px',
               borderRadius: 20,
               background: 'var(--emerald-dim)',
-              border: '1px solid rgba(16,185,129,0.22)',
+              border: '1px solid rgba(40,161,84,0.22)',
               fontFamily: 'var(--font-mono)',
               fontSize: 10.5,
               color: 'var(--emerald)',
@@ -80,8 +80,8 @@ export function SetupPanel() {
               display: 'flex', alignItems: 'center', gap: 7,
               padding: '7px 14px',
               borderRadius: 20,
-              background: 'rgba(59,130,246,0.08)',
-              border: '1px solid rgba(59,130,246,0.2)',
+              background: 'rgba(246,190,59,0.08)',
+              border: '1px solid rgba(246,190,59,0.2)',
               fontFamily: 'var(--font-mono)',
               fontSize: 10.5,
               color: 'var(--azure)',
@@ -96,8 +96,8 @@ export function SetupPanel() {
           marginTop: 16,
           padding: '14px 16px',
           borderRadius: 10,
-          background: 'rgba(16,185,129,0.04)',
-          border: '1px solid rgba(16,185,129,0.12)',
+          background: 'rgba(40,161,84,0.04)',
+          border: '1px solid rgba(40,161,84,0.12)',
           display: 'flex', alignItems: 'center', gap: 10,
           fontSize: 12.5,
           color: 'var(--text-soft)',
@@ -234,7 +234,7 @@ export function SetupPanel() {
         <div style={{
           marginTop: 16, padding: '12px 14px',
           borderRadius: 8,
-          background: 'rgba(59,130,246,0.04)',
+          background: 'rgba(246,190,59,0.04)',
           border: '1px solid var(--border-subtle)',
           fontSize: 12, color: 'var(--text-muted)',
           fontFamily: 'var(--font-mono)',
