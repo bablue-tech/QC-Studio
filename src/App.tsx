@@ -26,6 +26,7 @@ export default function App() {
     const next = !dark
     document.documentElement.classList.toggle('dark', next)
     try { localStorage.setItem('theme', next ? 'dark' : 'light') } catch { /* storage unavailable */ }
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', next ? '#0a0a0b' : '#f8f7f5')
     setDark(next)
   }
 

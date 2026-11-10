@@ -103,7 +103,7 @@ export function HistoryPanel() {
                     <button
                       className="btn-secondary"
                       style={{ fontSize: 11, padding: '5px 10px', gap: 4 }}
-                      onClick={() => { setReport(h.report); setTab('report') }}
+                      onClick={() => { setReport(h.report, h.thumbnail || null); setTab('report') }}
                     >
                       <ExternalLink size={10} /> Open
                     </button>

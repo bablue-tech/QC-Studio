@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { PROVIDER_DEFAULTS, DEFAULT_CHECKS } from './types'
-import type { Settings, RunRecord, ReferenceFrame } from './types'
+import type { Settings, RunRecord, ReferenceFrame, RepairState } from './types'
+
+export const IDLE_REPAIR: RepairState = { status: 'idle', stage: null, result: null, error: '' }
 
 const CHECK_MATRIX_VERSION = '4'
 const NEW_WEARABLE_CHECKS = [
@@ -46,6 +48,9 @@ type State = {
   isAnalyzing: boolean
   progress: string
   report: any | null
+  /** The exact image data URL the current report was produced from (sent again by Fix All Flags). */
+  reportImage: string | null
+  repair: RepairState
   error: string
   history: RunRecord[]
   activeTab: 'setup' | 'analyze' | 'report' | 'history'
@@ -55,7 +60,8 @@ type State = {
   clearImage: () => void
   setReferenceFrames: (frames: ReferenceFrame[]) => void
   setAnalyzing: (b: boolean, msg?: string) => void
-  setReport: (r: any) => void
+  setReport: (r: any, image?: string | null) => void
+  setRepair: (p: Partial<RepairState>) => void
   setError: (e: string) => void
   addHistory: (r: RunRecord) => void
   removeHistory: (id: string) => void
@@ -116,6 +122,8 @@ export const useStore = create<State>((set) => ({
   isAnalyzing: false,
   progress: '',
   report: null,
+  reportImage: null,
+  repair: IDLE_REPAIR,
   error: '',
   history: loadHistory(),
   activeTab: 'analyze',
@@ -135,15 +143,16 @@ export const useStore = create<State>((set) => ({
     } catch {}
     return { settings: next }
   }),
-  setImage: (img, url, name) => set({ image: img, imageUrl: url, imageName: name, imageWidth: img.naturalWidth || img.width, imageHeight: img.naturalHeight || img.height, report: null, error: '' }),
-  clearImage: () => set({ image: null, imageUrl: null, imageName: '', imageWidth: 0, imageHeight: 0, report: null }),
+  setImage: (img, url, name) => set({ image: img, imageUrl: url, imageName: name, imageWidth: img.naturalWidth || img.width, imageHeight: img.naturalHeight || img.height, report: null, reportImage: null, repair: IDLE_REPAIR, error: '' }),
+  clearImage: () => set({ image: null, imageUrl: null, imageName: '', imageWidth: 0, imageHeight: 0, report: null, reportImage: null, repair: IDLE_REPAIR }),
   setReferenceFrames: (frames) => set((state) => {
     const retainedUrls = new Set(frames.map((frame) => frame.url))
     state.referenceFrames.forEach((frame) => { if (!retainedUrls.has(frame.url)) URL.revokeObjectURL(frame.url) })
     return { referenceFrames: frames }
   }),
   setAnalyzing: (b, msg = '') => set({ isAnalyzing: b, progress: msg }),
-  setReport: (r) => set({ report: r }),
+  setReport: (r, image = null) => set({ report: r, reportImage: image, repair: IDLE_REPAIR }),
+  setRepair: (p) => set((s) => ({ repair: { ...s.repair, ...p } })),
   setError: (e) => set({ error: e }),
   addHistory: (r) => set((s) => {
     const next = [r, ...s.history].slice(0, 30)

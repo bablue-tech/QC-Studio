@@ -52,7 +52,7 @@ export function SetupPanel() {
                 Neural Vision Engine
               </div>
               <div style={{ fontSize: 11.5, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)' }}>
-                Gemini 3.5 Flash-Lite · Free-tier vision · Server-side key
+                Gemini 3.1 Flash-Lite · Auto-fallback when busy · Server-side key
               </div>
             </div>
           </div>

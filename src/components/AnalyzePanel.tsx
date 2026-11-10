@@ -93,7 +93,7 @@ export function AnalyzePanel() {
       const report = parseReport(text, settings.checks, referenceFrames.length > 0)
       report.raw = text
       report.source_reference_names = referenceFrames.map((frame) => frame.name)
-      setReport(report)
+      setReport(report, dataUrl)
       addHistory({
         id: 'run_' + Date.now(),
         createdAt: Date.now(),
@@ -168,8 +168,8 @@ export function AnalyzePanel() {
             <div className="card card-glow" style={{ padding: 14, position: 'relative' }}>
               <img
                 src={imageUrl!}
-                alt="preview"
-                style={{ width: '100%', borderRadius: 10, display: 'block', maxHeight: 520, objectFit: 'contain' }}
+                alt={`Preview of ${imageName}`}
+                className="analyze-preview-img"
               />
               {/* Corner brackets */}
               <div className="corner-bracket tl" />
